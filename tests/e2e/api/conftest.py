@@ -17,6 +17,7 @@ def http_session(
 ) -> Iterator["Client"]:
     headers = {
         "Accept": "application/json",
+        "Content-Type": "application/json",
         "User-Agent": "example-ca.api_client/1.0",
     }
 
