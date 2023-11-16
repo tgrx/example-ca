@@ -29,4 +29,17 @@ class AllAuthorsResponse(ApiResponse[list[Author]]):
     pass
 
 
-__all__ = ("AllAuthorsResponse",)
+class CreateAuthorRequest(BaseModel):
+    model_config = default_model_config
+    name: str
+
+
+class CreateAuthorResponse(ApiResponse[Author]):
+    pass
+
+
+__all__ = (
+    "AllAuthorsResponse",
+    "CreateAuthorRequest",
+    "CreateAuthorResponse",
+)
