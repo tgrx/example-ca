@@ -1,0 +1,7 @@
+__pycache__/
+.env
+.idea/
+*.py[cod]
+*.so
+*$py.class
+docker-compose.override.yml

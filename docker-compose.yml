@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+
+  migrations:
+    container_name: example-ca.migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: [ task, db-migrate ]
+    env_file:
+      - .env
+    image: example-ca.webapp:latest
+    init: true
+    healthcheck:
+      disable: true
+    networks:
+      - example-ca-network
+    ports:
+      - "8000:80"
+    volumes:
+      - ./.local/docker/webapp/.local/:/app/.local/:rw
+
+  postgres:
+    container_name: example-ca.db
+    env_file:
+      - .env
+    healthcheck:
+      interval: 30s
+      retries: 4
+      start_period: 12s
+      test: psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost -c 'select 1;'
+      timeout: 4s
+    image: postgres:16.0-alpine3.18
+    init: true
+    networks:
+      - example-ca-network
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.local/docker/db/data/:/var/lib/postgresql/data/:rw
+
+  webapp:
+    build:
+      args:
+        - PIP_VERSION=${WEBAPP_BUILD_PIP_VERSION}
+        - POETRY_VERSION=${WEBAPP_BUILD_POETRY_VERSION}
+        - PYTHON_VERSION=${WEBAPP_BUILD_PYTHON_VERSION}
+      context: .
+      target: production
+    container_name: example-ca.webapp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    entrypoint: [ task, run-server-prod ]
+    env_file:
+      - .env
+    image: example-ca.webapp:latest
+    init: true
+    networks:
+      - example-ca-network
+    ports:
+      - "8000:80"
+    volumes:
+      - ./.local/docker/webapp/.local/:/app/.local/:rw
+
+networks:
+  example-ca-network:
+    name: example-ca.local
+    driver: bridge

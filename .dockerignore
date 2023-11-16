@@ -1,0 +1,13 @@
+.env
+.env.sample
+.flake8
+.gitignore
+.local/
+.python-version
+**/__pycache__
+**/*.py[cod]
+dist/
+docker-compose.override.yml
+docker-compose.yml
+Dockerfile
+poetry.toml

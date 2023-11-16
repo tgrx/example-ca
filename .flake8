@@ -1,0 +1,5 @@
+[flake8]
+ignore = B101,S101,W503
+max_cognitive_complexity = 12
+exclude =
+    .local

@@ -1,0 +1,8 @@
+{
+    "json.schemaDownload.enable": true,
+    "python.analysis.autoSearchPaths": false,
+    "python.analysis.extraPaths": [],
+    "python.autoComplete.extraPaths": [],
+    "python.defaultInterpreterPath": ".local/example-ca-F0xzQzxt-py3.11",
+    "python.terminal.activateEnvironment": false
+}
