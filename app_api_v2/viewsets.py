@@ -1,20 +1,24 @@
 from typing import TYPE_CHECKING
-from uuid import uuid4
+from uuid import UUID
 
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from app.entities.models import Author
+from app.repos.django.author import AuthorRepo
+from app.usecases.author import CreateAuthorUseCase
+from app.usecases.author import GetAllAuthorsUseCase
+from app_api_v1.models import Author
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from rest_framework.request import Request
 
 
 class AuthorViewSet(ViewSet):
     def create(self, request: "Request") -> "Response":
-        author = Author(id=uuid4(), name=request.data["name"])
+        repo = AuthorRepo(model=Author)
+        create_author = CreateAuthorUseCase(repo=repo)
+
+        author = create_author(name=request.data["name"])
         data = author.model_dump()
 
         response = Response(
@@ -26,8 +30,17 @@ class AuthorViewSet(ViewSet):
 
         return response
 
-    def retrieve(self, request: "Request", pk: "UUID") -> "Response":
-        author = Author(id=uuid4(), name=str(uuid4()))
+    def retrieve(self, request: "Request", pk: str) -> "Response":
+        repo = AuthorRepo(model=Author)
+        get_all_authors = GetAllAuthorsUseCase(repo=repo)
+
+        authors = get_all_authors()
+
+        from devtools import debug
+
+        debug(authors, pk)
+
+        author = next(author for author in authors if author.id == UUID(pk))
         data = author.model_dump()
 
         response = Response(

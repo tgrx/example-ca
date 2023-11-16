@@ -18,3 +18,26 @@ class GetAllAuthorsUseCase:
     def __call__(self) -> list["Author"]:
         authors = self.repo.get_all()
         return authors
+
+
+@attrs.frozen(kw_only=True, slots=True)
+class CreateAuthorUseCase:
+    """
+    Use Case: Create an author.
+    """
+
+    repo: "AuthorRepo"
+
+    def __call__(
+        self,
+        *,
+        name: str,
+    ) -> "Author":
+        author = self.repo.create(name=name)
+        return author
+
+
+__all__ = (
+    "CreateAuthorUseCase",
+    "GetAllAuthorsUseCase",
+)
