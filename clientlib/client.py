@@ -6,9 +6,12 @@ import tenacity
 from clientlib.entities import AllAuthorsResponse
 from clientlib.entities import CreateAuthorRequest
 from clientlib.entities import CreateAuthorResponse
+from clientlib.entities import GetAuthorResponse
 from clientlib.errors import AppClientError
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from httpx import Client
 
     from app.entities.models import Author
@@ -87,3 +90,31 @@ class AppClient:
         authors = payload.data
 
         return authors
+
+    @retry
+    def get_author_by_id(
+        self,
+        id: "UUID",  # noqa: A002,VNE003
+    ) -> "Author":
+        response = self.session.get(f"/api/v2/authors/{id}/")
+
+        if response.status_code != 200:
+            raise AppClientError(
+                "unsuccessful api call",
+                code=response.status_code,
+                headers=dict(response.headers.items()),
+                payload=response.text,
+            )
+
+        payload = GetAuthorResponse.model_validate_json(response.text)
+        if payload.errors:
+            raise AppClientError(
+                "cannot get author",
+                code=response.status_code,
+                headers=dict(response.headers.items()),
+                payload=response.text,
+            )
+
+        author = payload.data
+
+        return author
