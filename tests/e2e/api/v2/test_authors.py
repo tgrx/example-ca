@@ -5,13 +5,18 @@ if TYPE_CHECKING:
     from clientlib.client import AppClient
 
 
-def test_user_can_create_author(
+def test_user_can_create_and_retrieve_author(
     *,
     client: "AppClient",
 ) -> None:
     salt = os.urandom(4).hex()
     name = f"author {salt}"
-    author = client.create_author(name=name)
 
-    assert author.id
-    assert author.name == name
+    author_created = client.create_author(name=name)
+
+    assert author_created.id
+    assert author_created.name == name
+
+    author_retrieved = client.get_author_by_id(id=author_created.id)
+
+    assert author_retrieved == author_created
