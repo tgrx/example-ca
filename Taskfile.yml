@@ -195,3 +195,4 @@ vars:
 
 env:
   PYTHONPATH: "{{.ROOT_DIR}}"
+  PYTHONPYCACHEPREFIX: "{{.DIR_LOCAL}}"
