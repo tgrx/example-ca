@@ -76,7 +76,7 @@ class AppClient:
     ) -> None:
         response = self.session.delete(f"/api/v2/authors/{id}/")
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             raise AppClientError(
                 "unsuccessful api call",
                 code=response.status_code,

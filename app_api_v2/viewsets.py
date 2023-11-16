@@ -30,16 +30,23 @@ class AuthorViewSet(ViewSet):
 
         return response
 
+    def destroy(self, request: "Request", pk: str) -> "Response":
+        repo = AuthorRepo(model=Author)
+        repo.delete(id=UUID(pk))
+
+        response = Response(
+            {
+                "data": None,
+            },
+        )
+
+        return response
+
     def retrieve(self, request: "Request", pk: str) -> "Response":
         repo = AuthorRepo(model=Author)
         get_all_authors = GetAllAuthorsUseCase(repo=repo)
 
         authors = get_all_authors()
-
-        from devtools import debug
-
-        debug(authors, pk)
-
         author = next(author for author in authors if author.id == UUID(pk))
         data = author.model_dump()
 
