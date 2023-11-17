@@ -89,7 +89,7 @@ class AuthorViewSet(ViewSet):
 
         authors = find_authors(id=UUID(pk))
         if not authors:
-            payload["errors"] = ["author with id={pk} not found"]
+            payload["errors"] = [f"author with id={pk} not found"]
             status = 404
         else:
             author = authors[0]
