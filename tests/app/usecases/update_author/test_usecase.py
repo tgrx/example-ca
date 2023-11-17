@@ -4,19 +4,22 @@ if TYPE_CHECKING:
     from faker import Faker
 
     from app.entities.interfaces import AuthorRepo
-    from app.usecases.author import CreateAuthorUseCase
+    from app.entities.models import Author
+    from app.usecases.author import UpdateAuthorUseCase
 
 
 def test_usecase(
     *,
     author_repo: "AuthorRepo",
-    create_author: "CreateAuthorUseCase",
     faker: "Faker",
+    installed_author: "Author",
+    update_author: "UpdateAuthorUseCase",
 ) -> None:
     name = faker.name()
-    author = create_author(name=name)
+    author = update_author(id=installed_author.id, name=name)
 
-    assert author.id
+    assert author.id == installed_author.id
+    assert author.name != installed_author.name
     assert author.name == name
 
     authors = author_repo.get_all()

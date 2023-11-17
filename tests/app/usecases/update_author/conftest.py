@@ -10,12 +10,12 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(scope="function")
-def installed_authors(
+def installed_author(
     *,
     author_repo: "AuthorRepo",
     faker: "Faker",
-) -> list["Author"]:
-    names = [faker.name() for _ in "1234"]
-    authors = [author_repo.create(name=name) for name in names]
+) -> "Author":
+    name = faker.name()
+    author = author_repo.create(name=name)
 
-    return authors
+    return author
