@@ -150,6 +150,40 @@ class AppClient:
         return author
 
     @retry
+    def get_author_by_name(
+        self,
+        name: str,  # noqa: A002,VNE003
+    ) -> "Author":
+        response = self.session.get(
+            "/api/v2/authors/",
+            params={
+                "name": name,
+            },
+        )
+
+        if response.status_code != 200:
+            raise AppClientError(
+                "unsuccessful api call",
+                code=response.status_code,
+                headers=dict(response.headers.items()),
+                payload=response.text,
+            )
+
+        payload = AllAuthorsResponse.model_validate_json(response.text)
+        if payload.errors:
+            raise AppClientError(
+                "cannot get author",
+                code=response.status_code,
+                headers=dict(response.headers.items()),
+                payload=response.text,
+            )
+
+        authors = payload.data
+        author = authors[0]
+
+        return author
+
+    @retry
     def update_author(
         self,
         *,

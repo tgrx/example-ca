@@ -40,12 +40,7 @@ def assert_author_created(client: "AppClient", name: str) -> "Author":
 
 
 def assert_author_exists(client: "AppClient", name: str) -> "Author":
-    authors = client.get_all_authors()
-    try:
-        author = next(author for author in authors if author.name == name)
-    except StopIteration:
-        raise AssertionError(f"no author with name {name!r}")
-
+    author = client.get_author_by_name(name=name)
     author_retrieved = client.get_author_by_id(id=author.id)
     assert author_retrieved == author
     return author

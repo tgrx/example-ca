@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
+from typing import Generator
+from uuid import UUID
 
 import attrs
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from app.entities.interfaces import AuthorRepo
     from app.entities.models import Author
 
@@ -40,6 +40,32 @@ class CreateAuthorUseCase:
 
 
 @attrs.frozen(kw_only=True, slots=True)
+class FindAuthorsUseCase:
+    """
+    Use case: Find authors by attributes.
+    """
+
+    repo: "AuthorRepo"
+
+    def __call__(
+        self,
+        *,
+        name: str | None = None,
+        id: UUID | None = None,  # noqa: A002
+    ) -> list["Author"]:
+        authors: list["Author"] | Generator[
+            "Author", None, None
+        ] = self.repo.get_all()
+
+        if id is not None:
+            authors = (author for author in authors if author.id == id)
+        if name is not None:
+            authors = (author for author in authors if author.name == name)
+
+        return list(authors)
+
+
+@attrs.frozen(kw_only=True, slots=True)
 class UpdateAuthorUseCase:
     """
     Use Case: Update an author.
@@ -59,6 +85,7 @@ class UpdateAuthorUseCase:
 
 __all__ = (
     "CreateAuthorUseCase",
+    "FindAuthorsUseCase",
     "GetAllAuthorsUseCase",
     "UpdateAuthorUseCase",
 )

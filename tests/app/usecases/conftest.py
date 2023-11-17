@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from app.usecases.author import CreateAuthorUseCase
+from app.usecases.author import FindAuthorsUseCase
 from app.usecases.author import GetAllAuthorsUseCase
 from app.usecases.author import UpdateAuthorUseCase
 
@@ -16,6 +17,14 @@ def create_author(
     author_repo: "AuthorRepo",
 ) -> "CreateAuthorUseCase":
     return CreateAuthorUseCase(repo=author_repo)
+
+
+@pytest.fixture(scope="function")
+def find_authors(
+    *,
+    author_repo: "AuthorRepo",
+) -> "FindAuthorsUseCase":
+    return FindAuthorsUseCase(repo=author_repo)
 
 
 @pytest.fixture(scope="function")

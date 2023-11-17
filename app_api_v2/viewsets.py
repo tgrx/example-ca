@@ -6,11 +6,13 @@ from rest_framework.viewsets import ViewSet
 
 from app.repos.django.author import AuthorRepo
 from app.usecases.author import CreateAuthorUseCase
-from app.usecases.author import GetAllAuthorsUseCase
+from app.usecases.author import FindAuthorsUseCase
 from app.usecases.author import UpdateAuthorUseCase
 from app_api_v1.models import Author
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from rest_framework.request import Request
 
 
@@ -43,6 +45,25 @@ class AuthorViewSet(ViewSet):
 
         return response
 
+    def list(self, request: "Request") -> "Response":  # noqa: A003
+        name = request.query_params.get("name")
+        id = request.query_params.get("id")  # noqa: A001,VNE003
+
+        repo = AuthorRepo(model=Author)
+        find_authors = FindAuthorsUseCase(repo=repo)
+
+        authors = find_authors(id=UUID(id) if id else None, name=name)
+        data = [author.model_dump() for author in authors]
+
+        response = Response(
+            {
+                "data": data,
+            },
+            status=200,
+        )
+
+        return response
+
     def partial_update(self, request: "Request", pk: str) -> "Response":
         repo = AuthorRepo(model=Author)
         update_author = UpdateAuthorUseCase(repo=repo)
@@ -61,17 +82,23 @@ class AuthorViewSet(ViewSet):
 
     def retrieve(self, request: "Request", pk: str) -> "Response":
         repo = AuthorRepo(model=Author)
-        get_all_authors = GetAllAuthorsUseCase(repo=repo)
+        find_authors = FindAuthorsUseCase(repo=repo)
 
-        authors = get_all_authors()
-        author = next(author for author in authors if author.id == UUID(pk))
-        data = author.model_dump()
+        payload: dict[str, "Any"] = {}
+        status = 500
+
+        authors = find_authors(id=UUID(pk))
+        if not authors:
+            payload["errors"] = ["author with id={pk} not found"]
+            status = 404
+        else:
+            author = authors[0]
+            payload["data"] = author.model_dump()
+            status = 200
 
         response = Response(
-            {
-                "data": data,
-            },
-            status=200,
+            payload,
+            status=status,
         )
 
         return response
