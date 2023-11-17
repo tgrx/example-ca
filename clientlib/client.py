@@ -8,6 +8,8 @@ from clientlib.entities import CreateAuthorRequest
 from clientlib.entities import CreateAuthorResponse
 from clientlib.entities import DeleteAuthorResponse
 from clientlib.entities import GetAuthorResponse
+from clientlib.entities import UpdateAuthorRequest
+from clientlib.entities import UpdateAuthorResponse
 from clientlib.errors import AppClientError
 
 if TYPE_CHECKING:
@@ -138,6 +140,42 @@ class AppClient:
         if payload.errors:
             raise AppClientError(
                 "cannot get author",
+                code=response.status_code,
+                headers=dict(response.headers.items()),
+                payload=response.text,
+            )
+
+        author = payload.data
+
+        return author
+
+    @retry
+    def update_author(
+        self,
+        *,
+        id: "UUID",  # noqa: A002
+        name: str,
+    ) -> "Author":
+        request = UpdateAuthorRequest(name=name)
+        request_body = request.model_dump_json()
+
+        response = self.session.patch(
+            f"/api/v2/authors/{id}/",
+            content=request_body,
+        )
+
+        if response.status_code != 200:
+            raise AppClientError(
+                "unsuccessful api call",
+                code=response.status_code,
+                headers=dict(response.headers.items()),
+                payload=response.text,
+            )
+
+        payload = UpdateAuthorResponse.model_validate_json(response.text)
+        if payload.errors:
+            raise AppClientError(
+                "cannot update author",
                 code=response.status_code,
                 headers=dict(response.headers.items()),
                 payload=response.text,

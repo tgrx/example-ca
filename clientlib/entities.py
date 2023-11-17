@@ -46,10 +46,20 @@ class GetAuthorResponse(ApiResponse[Author]):
     pass
 
 
+class UpdateAuthorRequest(CreateAuthorRequest):
+    pass
+
+
+class UpdateAuthorResponse(ApiResponse[Author]):
+    pass
+
+
 __all__ = (
     "AllAuthorsResponse",
     "CreateAuthorRequest",
     "CreateAuthorResponse",
     "DeleteAuthorResponse",
     "GetAuthorResponse",
+    "UpdateAuthorRequest",
+    "UpdateAuthorResponse",
 )
