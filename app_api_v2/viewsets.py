@@ -7,6 +7,7 @@ from rest_framework.viewsets import ViewSet
 from app.repos.django.author import AuthorRepo
 from app.usecases.author import CreateAuthorUseCase
 from app.usecases.author import GetAllAuthorsUseCase
+from app.usecases.author import UpdateAuthorUseCase
 from app_api_v1.models import Author
 
 if TYPE_CHECKING:
@@ -38,6 +39,22 @@ class AuthorViewSet(ViewSet):
             {
                 "data": None,
             },
+        )
+
+        return response
+
+    def partial_update(self, request: "Request", pk: str) -> "Response":
+        repo = AuthorRepo(model=Author)
+        update_author = UpdateAuthorUseCase(repo=repo)
+
+        author = update_author(id=UUID(pk), name=request.data["name"])
+        data = author.model_dump()
+
+        response = Response(
+            {
+                "data": data,
+            },
+            status=200,
         )
 
         return response

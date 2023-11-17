@@ -52,5 +52,17 @@ class AuthorRepo:
         authors = [Author.model_validate(record) for record in records]
         return authors
 
+    def update(
+        self,
+        *,
+        id: "UUID",  # noqa: A002
+        name: str,
+    ) -> "Author":
+        record = self.model.objects.get(pk=id)
+        record.name = name
+        record.save()
+        author = Author.model_validate(record)
+        return author
+
 
 __all__ = ("AuthorRepo",)

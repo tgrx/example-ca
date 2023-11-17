@@ -43,7 +43,18 @@ class AuthorRepo(Protocol):
         id: "UUID",  # noqa: A002
     ) -> None:
         """
-        Use this to delee Author object using its id (pk).
+        Use this to delete Author object using its id (pk).
+        """
+        ...
+
+    def update(
+        self: "Self",
+        *,
+        id: "UUID",  # noqa: A002
+        name: str,
+    ) -> "Author":
+        """
+        Use this to update Author with new data using its id (pk).
         """
         ...
 
