@@ -29,4 +29,37 @@ class AllAuthorsResponse(ApiResponse[list[Author]]):
     pass
 
 
-__all__ = ("AllAuthorsResponse",)
+class CreateAuthorRequest(BaseModel):
+    model_config = default_model_config
+    name: str
+
+
+class CreateAuthorResponse(ApiResponse[Author]):
+    pass
+
+
+class DeleteAuthorResponse(ApiResponse[None]):
+    pass
+
+
+class GetAuthorResponse(ApiResponse[Author]):
+    pass
+
+
+class UpdateAuthorRequest(CreateAuthorRequest):
+    pass
+
+
+class UpdateAuthorResponse(ApiResponse[Author]):
+    pass
+
+
+__all__ = (
+    "AllAuthorsResponse",
+    "CreateAuthorRequest",
+    "CreateAuthorResponse",
+    "DeleteAuthorResponse",
+    "GetAuthorResponse",
+    "UpdateAuthorRequest",
+    "UpdateAuthorResponse",
+)
