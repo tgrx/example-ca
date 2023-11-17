@@ -85,6 +85,7 @@ devtools = {extras = ["pygments"], version = "0.12.2"}
 dj-database-url = "2.1.0"
 django = "4.2.7"
 djangorestframework = "3.14.0"
+drf-spectacular = "0.26.5"
 gunicorn = "21.2.0"
 httpx = "0.25.1"
 orjson = "3.9.10"
