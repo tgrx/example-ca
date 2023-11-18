@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "app_api_v1",
     "app_api_v2",
+    "app_api_v3",
     "app_main",
 ]
 

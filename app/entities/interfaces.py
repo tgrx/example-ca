@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from .models import Author
+    from .models import Book
 
 
 class AuthorRepo(Protocol):
@@ -59,4 +60,51 @@ class AuthorRepo(Protocol):
         ...
 
 
-__all__ = ("AuthorRepo",)
+class BookRepo(Protocol):
+    """
+    This is how any Book repo MUST act.
+    """
+
+    def create(
+        self: "Self",
+        *,
+        author_ids: list["UUID"],
+        title: str,
+    ) -> "Book":
+        """
+        Use this to create a new Book object.
+        """
+        ...
+
+    def delete(
+        self: "Self",
+        id: "UUID",  # noqa: A002,VNE003
+    ) -> None:
+        """
+        Use this to delete Book object using its id (pk).
+        """
+        ...
+
+    def get_all(self: "Self") -> list["Book"]:
+        """
+        Use this to get all Book objects.
+        """
+        ...
+
+    def update(
+        self: "Self",
+        id: "UUID",  # noqa: A002,VNE003
+        *,
+        author_ids: list["UUID"] | None = None,
+        title: str | None = None,
+    ) -> "Book":
+        """
+        Use this to update Book with new data using its id (pk).
+        """
+        ...
+
+
+__all__ = (
+    "AuthorRepo",
+    "BookRepo",
+)
