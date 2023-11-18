@@ -28,4 +28,15 @@ class Author(BaseModel):
     name: str
 
 
-__all__ = ("Author",)
+class Book(BaseModel):
+    model_config = default_model_config
+
+    authors: list[Author]
+    id: UUID  # noqa: A003,VNE003  # good attr name
+    title: str
+
+
+__all__ = (
+    "Author",
+    "Book",
+)

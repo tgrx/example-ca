@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 
 from app.entities.models import Author
+from app.entities.models import Book
 
 default_model_config = ConfigDict(
     extra="forbid",
@@ -18,6 +19,10 @@ default_model_config = ConfigDict(
 T = TypeVar("T")
 
 
+class ApiRequest(BaseModel):
+    model_config = default_model_config
+
+
 class ApiResponse(BaseModel, Generic[T]):
     model_config = default_model_config
 
@@ -29,8 +34,11 @@ class AllAuthorsResponse(ApiResponse[list[Author]]):
     pass
 
 
-class CreateAuthorRequest(BaseModel):
-    model_config = default_model_config
+class AllBooksResponse(ApiResponse[list[Book]]):
+    pass
+
+
+class CreateAuthorRequest(ApiRequest):
     name: str
 
 
@@ -38,11 +46,28 @@ class CreateAuthorResponse(ApiResponse[Author]):
     pass
 
 
+class CreateBookRequest(ApiRequest):
+    authors: list[Author]
+    title: str
+
+
+class CreateBookResponse(ApiResponse[Book]):
+    pass
+
+
 class DeleteAuthorResponse(ApiResponse[None]):
     pass
 
 
+class DeleteBookResponse(ApiResponse[None]):
+    pass
+
+
 class GetAuthorResponse(ApiResponse[Author]):
+    pass
+
+
+class GetBookResponse(ApiResponse[Book]):
     pass
 
 
@@ -54,12 +79,28 @@ class UpdateAuthorResponse(ApiResponse[Author]):
     pass
 
 
+class UpdateBookRequest(ApiRequest):
+    authors: list[Author] | None = None
+    title: str | None = None
+
+
+class UpdateBookResponse(ApiResponse[Book]):
+    pass
+
+
 __all__ = (
     "AllAuthorsResponse",
+    "AllBooksResponse",
     "CreateAuthorRequest",
     "CreateAuthorResponse",
+    "CreateBookRequest",
+    "CreateBookResponse",
     "DeleteAuthorResponse",
+    "DeleteBookResponse",
     "GetAuthorResponse",
+    "GetBookResponse",
     "UpdateAuthorRequest",
     "UpdateAuthorResponse",
+    "UpdateBookRequest",
+    "UpdateBookResponse",
 )

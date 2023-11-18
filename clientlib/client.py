@@ -12,13 +12,20 @@ import tenacity
 from pydantic import BaseModel
 
 from clientlib.entities import AllAuthorsResponse
+from clientlib.entities import AllBooksResponse
 from clientlib.entities import ApiResponse
 from clientlib.entities import CreateAuthorRequest
 from clientlib.entities import CreateAuthorResponse
+from clientlib.entities import CreateBookRequest
+from clientlib.entities import CreateBookResponse
 from clientlib.entities import DeleteAuthorResponse
+from clientlib.entities import DeleteBookResponse
 from clientlib.entities import GetAuthorResponse
+from clientlib.entities import GetBookResponse
 from clientlib.entities import UpdateAuthorRequest
 from clientlib.entities import UpdateAuthorResponse
+from clientlib.entities import UpdateBookRequest
+from clientlib.entities import UpdateBookResponse
 from clientlib.errors import AppClientError
 
 if TYPE_CHECKING:
@@ -28,6 +35,7 @@ if TYPE_CHECKING:
     from httpx import Response
 
     from app.entities.models import Author
+    from app.entities.models import Book
 
 
 T = TypeVar("T")
@@ -52,7 +60,11 @@ class AppClient:
 
     session: "Client"
 
-    def create_author(self, *, name: str) -> "Author":
+    def create_author(
+        self,
+        *,
+        name: str,
+    ) -> "Author":
         author = self._api_call(
             method="post",
             path="/api/v2/authors/",
@@ -63,15 +75,40 @@ class AppClient:
 
         return author
 
-    def delete_author_by_id(
+    def create_book(
         self,
         *,
-        id: "UUID",  # noqa: A002
+        authors: list["Author"],
+        title: str,
+    ) -> "Book":
+        book = self._api_call(
+            method="post",
+            path="/api/v3/books/",
+            request=CreateBookRequest(authors=authors, title=title),
+            response_cls=CreateBookResponse,
+            statuses=(201,),
+        )
+
+        return book
+
+    def delete_author_by_id(
+        self,
+        id: "UUID",  # noqa: A002,VNE003
     ) -> None:
         return self._api_call(
             method="delete",
             path=f"/api/v2/authors/{id}/",
             response_cls=DeleteAuthorResponse,
+        )
+
+    def delete_book_by_id(
+        self,
+        id: "UUID",  # noqa: A002,VNE003
+    ) -> None:
+        return self._api_call(
+            method="delete",
+            path=f"/api/v3/books/{id}/",
+            response_cls=DeleteBookResponse,
         )
 
     def get_all_authors(self) -> list["Author"]:
@@ -82,6 +119,15 @@ class AppClient:
         )
 
         return authors
+
+    def get_all_books(self) -> list["Book"]:
+        books = self._api_call(
+            method="get",
+            path="/api/v3/books/",
+            response_cls=AllBooksResponse,
+        )
+
+        return books
 
     def get_author_by_id(
         self,
@@ -114,10 +160,41 @@ class AppClient:
 
         return author
 
+    def get_book_by_id(
+        self,
+        id: "UUID",  # noqa: A002,VNE003
+    ) -> "Book":
+        book = self._api_call(
+            method="get",
+            path=f"/api/v3/books/{id}/",
+            response_cls=GetBookResponse,
+            statuses=(200, 404),
+        )
+
+        return book
+
+    def get_book_by_title(
+        self,
+        title: str,
+    ) -> "Book":
+        books = self._api_call(
+            method="get",
+            params={"title": title},
+            path="/api/v3/books/",
+            response_cls=AllBooksResponse,
+        )
+
+        if not books:
+            raise AppClientError(f"no books with {title=!r}")
+
+        book = books[0]
+
+        return book
+
     def update_author(
         self,
+        id: "UUID",  # noqa: A002,VNE003
         *,
-        id: "UUID",  # noqa: A002
         name: str,
     ) -> "Author":
         author = self._api_call(
@@ -129,6 +206,23 @@ class AppClient:
         )
 
         return author
+
+    def update_book(
+        self,
+        id: "UUID",  # noqa: A002,VNE003
+        *,
+        authors: list["Author"] | None = None,
+        title: str | None = None,
+    ) -> "Book":
+        book = self._api_call(
+            method="patch",
+            path=f"/api/v3/books/{id}/",
+            request=UpdateBookRequest(authors=authors, title=title),
+            response_cls=UpdateBookResponse,
+            statuses=(200,),
+        )
+
+        return book
 
     def _api_call(
         self,
