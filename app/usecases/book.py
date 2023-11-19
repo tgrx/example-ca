@@ -54,7 +54,7 @@ class FindBooksUseCase:
     def __call__(
         self,
         *,
-        id: None | "UUID" = None,  # noqa:A002
+        id: UUID | None = None,  # noqa:A002
         title: str | None = None,
     ) -> list["Book"]:
         books: list["Book"] | Generator["Book", None, None]

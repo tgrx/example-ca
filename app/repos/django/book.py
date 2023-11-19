@@ -4,12 +4,12 @@ from uuid import uuid4
 
 import attrs
 
+from app.entities.models import Author
 from app.entities.models import Book
 
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from app_api_v1.models import Author as AuthorDjangoModel
     from app_api_v3.models import Book as BookDjangoModel
 
 
@@ -33,12 +33,18 @@ class BookRepo:
         record_book.save()
 
         # todo: check that no authors => error
-        records_authors = AuthorDjangoModel.objects.filter(
-            id__in=author_ids,
-        ).all()
-        record_book.authors.add(*records_authors)
+        record_book.authors.add(*author_ids)  # type: ignore  # pk is uuid
 
-        book = Book.model_validate(record_book)
+        book = Book(
+            authors=[
+                Author.model_validate(record_author)
+                for record_author in record_book.authors.order_by(
+                    "name", "pk"
+                ).all()
+            ],
+            id=record_book.id,
+            title=record_book.title,
+        )
 
         return book
 
@@ -56,7 +62,19 @@ class BookRepo:
 
     def get_all(self) -> list["Book"]:
         records = self.model.objects.all()
-        books = [Book.model_validate(record) for record in records]
+        books = [
+            Book(
+                id=record_book.id,
+                title=record_book.title,
+                authors=[
+                    Author.model_validate(record_author)
+                    for record_author in record_book.authors.order_by(
+                        "name", "pk"
+                    ).all()
+                ],
+            )
+            for record_book in records
+        ]
         return books
 
     def update(
@@ -74,15 +92,21 @@ class BookRepo:
             record_book.title = title
 
         if author_ids:
-            records_authors = AuthorDjangoModel.objects.filter(
-                id__in=author_ids
-            )
             record_book.authors.clear()
             # todo: what if there are no authors?
-            record_book.authors.add(*records_authors)
+            record_book.authors.add(*author_ids)  # type: ignore  # pk is uuid
 
         record_book.save()
-        book = Book.model_validate(record_book)
+        book = Book(
+            authors=[
+                Author.model_validate(record_author)
+                for record_author in record_book.authors.order_by(
+                    "name", "pk"
+                ).all()
+            ],
+            id=record_book.id,
+            title=record_book.title,
+        )
         return book
 
 

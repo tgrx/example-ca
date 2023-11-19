@@ -78,7 +78,7 @@ class AppClient:
     def create_book(
         self,
         *,
-        authors: list["Author"],
+        authors: list["UUID"],
         title: str,
     ) -> "Book":
         book = self._api_call(
@@ -211,7 +211,7 @@ class AppClient:
         self,
         id: "UUID",  # noqa: A002,VNE003
         *,
-        authors: list["Author"] | None = None,
+        authors: list["UUID"] | None = None,
         title: str | None = None,
     ) -> "Book":
         book = self._api_call(

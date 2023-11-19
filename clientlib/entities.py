@@ -1,5 +1,6 @@
 from typing import Generic
 from typing import TypeVar
+from uuid import UUID
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -47,7 +48,7 @@ class CreateAuthorResponse(ApiResponse[Author]):
 
 
 class CreateBookRequest(ApiRequest):
-    authors: list[Author]
+    authors: list[UUID]
     title: str
 
 
@@ -80,7 +81,7 @@ class UpdateAuthorResponse(ApiResponse[Author]):
 
 
 class UpdateBookRequest(ApiRequest):
-    authors: list[Author] | None = None
+    authors: list[UUID] | None = None
     title: str | None = None
 
 
