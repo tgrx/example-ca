@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 
 from app.repos.sqlalchemy.author import AuthorRepo
 from app.repos.sqlalchemy.tables import table_authors
+from app.repos.sqlalchemy.tables import table_books
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -62,6 +63,7 @@ def warden(
 ) -> Iterator[None]:
     tables = {
         table_authors,
+        table_books,
     }
 
     conn: "Connection"
@@ -91,7 +93,10 @@ def warden(
                 )
                 errors.append(msg)
 
-                conn.execute(table.delete().where(table.c.id.in_(extra)))
+                # conn.execute(table.delete().where(table.c.id.in_(extra)))
+                conn.execute(
+                    sa.text(f"truncate {ti.name} restart identity cascade;")
+                )
 
     if errors:
         msg = "\n\n".join(errors)

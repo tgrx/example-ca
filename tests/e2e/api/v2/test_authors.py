@@ -40,8 +40,8 @@ def assert_author_created(client: "AppClient", name: str) -> "Author":
 
 
 def assert_author_exists(client: "AppClient", name: str) -> "Author":
-    author = client.get_author_by_name(name=name)
-    author_retrieved = client.get_author_by_id(id=author.id)
+    author = client.get_author_by_name(name)
+    author_retrieved = client.get_author_by_id(author.id)
     assert author_retrieved == author
     return author
 
@@ -51,7 +51,7 @@ def assert_author_updated(
     id: "UUID",  # noqa: A002,VNE003
     name: str,
 ) -> "Author":
-    author = client.update_author(id=id, name=name)
+    author = client.update_author(id, name=name)
     assert author.id == id
     assert author.name == name
     return author
@@ -67,4 +67,4 @@ def assert_no_author(client: "AppClient", name: str) -> None:
 
 def delete_author(client: "AppClient", name: str) -> None:
     author = assert_author_exists(client, name)
-    client.delete_author_by_id(id=author.id)
+    client.delete_author_by_id(author.id)
