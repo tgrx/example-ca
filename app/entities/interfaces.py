@@ -41,6 +41,7 @@ class AuthorRepo(Protocol):
     def delete(
         self: "Self",
         *,
+        # todo: #6 id to rename, to positional
         id: "UUID",  # noqa: A002
     ) -> None:
         """
@@ -51,6 +52,7 @@ class AuthorRepo(Protocol):
     def update(
         self: "Self",
         *,
+        # todo: #6 id to rename, to positional
         id: "UUID",  # noqa: A002
         name: str,
     ) -> "Author":
@@ -78,6 +80,7 @@ class BookRepo(Protocol):
 
     def delete(
         self: "Self",
+        # todo: #6 id to rename
         id: "UUID",  # noqa: A002,VNE003
     ) -> None:
         """
@@ -93,9 +96,12 @@ class BookRepo(Protocol):
 
     def update(
         self: "Self",
+        # todo: #6 id to rename
         id: "UUID",  # noqa: A002,VNE003
         *,
+        # todo: #6 use undefined as default
         author_ids: list["UUID"] | None = None,
+        # todo: #6 use undefined as default
         title: str | None = None,
     ) -> "Book":
         """

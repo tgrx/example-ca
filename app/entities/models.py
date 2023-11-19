@@ -24,7 +24,7 @@ default_model_config = ConfigDict(
 class Author(BaseModel):
     model_config = default_model_config
 
-    id: UUID  # noqa: A003,VNE003  # good attr name
+    id: UUID  # noqa: A003,VNE003  # todo #6 rename
     name: str
 
 
@@ -32,7 +32,7 @@ class Book(BaseModel):
     model_config = default_model_config
 
     authors: list[Author]
-    id: UUID  # noqa: A003,VNE003  # good attr name
+    id: UUID  # noqa: A003,VNE003  # todo #6 rename
     title: str
 
 
