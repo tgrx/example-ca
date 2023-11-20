@@ -35,8 +35,36 @@ table_books = sa.Table(
     ),
 )
 
+table_books_authors = sa.Table(
+    "books_authors",
+    metadata,
+    sa.Column(
+        "author_id",
+        sa.ForeignKey(
+            table_authors.c.id,
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+    ),
+    sa.Column(
+        "book_id",
+        sa.ForeignKey(
+            table_books.c.id,
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+    ),
+    sa.Column(
+        "id",
+        sa.BigInteger,
+        primary_key=True,
+        autoincrement=True,
+    ),
+)
+
 
 __all__ = (
     "table_authors",
+    "table_books_authors",
     "table_books",
 )
