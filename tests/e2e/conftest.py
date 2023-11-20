@@ -1,17 +1,18 @@
 from typing import TYPE_CHECKING
 from typing import Iterator
+from uuid import UUID
 
 import pytest
 import sqlalchemy as sa
 from sqlalchemy import create_engine
 
 from app.repos.sqlalchemy.author import AuthorRepo
+from app.repos.sqlalchemy.book import BookRepo
 from app.repos.sqlalchemy.tables import table_authors
 from app.repos.sqlalchemy.tables import table_books
+from app.repos.sqlalchemy.tables import table_books_authors
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from sqlalchemy import Connection
     from sqlalchemy import Engine
     from sqlalchemy import Table
@@ -44,6 +45,28 @@ def installed_authors(
 
 
 @pytest.fixture(scope="session")
+def installed_authors_with_books(
+    *,
+    installed_authors: dict["UUID", "Author"],
+    primary_database_engine: "Engine",
+) -> Iterator[dict["UUID", "Author"]]:
+    repo = BookRepo(engine=primary_database_engine)
+
+    books = [
+        repo.create(
+            title=f"Bio of {author.name}",
+            author_ids=[author.id],
+        )
+        for author in installed_authors.values()
+    ]
+
+    yield installed_authors
+
+    for book in books:
+        repo.delete(id=book.id)
+
+
+@pytest.fixture(scope="session")
 def primary_database_engine(
     *,
     config: "Config",
@@ -63,6 +86,7 @@ def warden(
 ) -> Iterator[None]:
     tables = {
         table_authors,
+        table_books_authors,
         table_books,
     }
 
@@ -93,7 +117,6 @@ def warden(
                 )
                 errors.append(msg)
 
-                # conn.execute(table.delete().where(table.c.id.in_(extra)))
                 conn.execute(
                     sa.text(f"truncate {ti.name} restart identity cascade;")
                 )
@@ -103,7 +126,7 @@ def warden(
         raise AssertionError(msg)
 
 
-def get_all_ids(conn: "Connection", table: "Table") -> frozenset:
+def get_all_ids(conn: "Connection", table: "Table") -> frozenset[int | UUID]:
     stmt = sa.select(table.c.id)
     rows = conn.execute(stmt).fetchall()
     ids = frozenset(row.id for row in rows)

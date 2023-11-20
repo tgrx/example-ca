@@ -91,7 +91,7 @@ class BookRepo:
         if title is not None:
             record_book.title = title
 
-        if author_ids:
+        if author_ids is not None:
             record_book.authors.clear()
             # todo: what if there are no authors?
             record_book.authors.add(*author_ids)  # type: ignore  # pk is uuid

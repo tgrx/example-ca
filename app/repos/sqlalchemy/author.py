@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.entities.models import Author
 from app.repos.sqlalchemy.tables import table_authors
+from app.repos.sqlalchemy.tables import table_books_authors
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -51,14 +52,18 @@ class AuthorRepo:
         *,
         id: "UUID",  # noqa: A002
     ) -> None:
-        stmt = table_authors.delete().where(
+        stmt_books_authors = table_books_authors.delete().where(
+            table_books_authors.c.author_id == id,
+        )
+        stmt_authors = table_authors.delete().where(
             table_authors.c.id == id,
         )
 
         conn: "Connection"
         with self.engine.begin() as conn:
             # todo: what if db is down?
-            conn.execute(stmt)
+            conn.execute(stmt_books_authors)
+            conn.execute(stmt_authors)
 
     def get_all(self) -> list["Author"]:
         stmt = table_authors.select().order_by(

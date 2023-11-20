@@ -7,10 +7,12 @@ Pydantic: best.
 NamedTuple: hardcore.
 """
 
+from typing import Annotated
 from uuid import UUID
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
+from pydantic.functional_validators import BeforeValidator
 
 default_model_config = ConfigDict(
     extra="forbid",
@@ -21,10 +23,17 @@ default_model_config = ConfigDict(
 )
 
 
+def uuid_to_str(_value: str | UUID) -> UUID:
+    return _value if isinstance(_value, UUID) else UUID(_value)
+
+
+UUIDStr = Annotated[UUID, BeforeValidator(uuid_to_str)]
+
+
 class Author(BaseModel):
     model_config = default_model_config
 
-    id: UUID  # noqa: A003,VNE003  # todo #6 rename
+    id: UUIDStr  # noqa: A003,VNE003
     name: str
 
 
@@ -32,7 +41,7 @@ class Book(BaseModel):
     model_config = default_model_config
 
     authors: list[Author]
-    id: UUID  # noqa: A003,VNE003  # todo #6 rename
+    id: UUIDStr  # noqa: A003,VNE003
     title: str
 
 

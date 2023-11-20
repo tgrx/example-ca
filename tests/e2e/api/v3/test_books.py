@@ -69,6 +69,17 @@ def test_book_crud(
         title=title_pelevin,
     )
 
+    assert_book_updated(
+        client,
+        book.id,
+        authors=[],
+    )
+    assert_book_exists(
+        client,
+        authors=[],
+        title=title_pelevin,
+    )
+
     delete_book(client, title_pelevin)
     assert_no_book(client, title_pelevin)
     assert_no_book(client, title_pushkin)
@@ -99,7 +110,7 @@ def assert_book_exists(
     book_by_id = client.get_book_by_id(book.id)
     assert book_by_id == book
 
-    if authors:
+    if authors is not None:
         assert book.authors == authors
 
     assert book.title == title
@@ -116,20 +127,22 @@ def assert_book_updated(
     book_original = client.get_book_by_id(id)
     book_updated = client.update_book(
         id,
-        authors=[author.id for author in authors] if authors else None,
+        authors=[author.id for author in authors]
+        if authors is not None
+        else None,
         title=title,
     )
 
     assert book_original.id == book_updated.id
 
-    if title and title != book_original.title:
+    if title is not None and title != book_original.title:
         assert book_original.title != book_updated.title
         assert book_updated.title == title
     else:
         assert book_original.title == book_updated.title
         assert book_updated.title != title
 
-    if authors and authors != book_original.authors:
+    if authors is not None and authors != book_original.authors:
         assert book_original.authors != book_updated.authors
         assert book_updated.authors == authors
     else:
