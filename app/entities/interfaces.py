@@ -6,15 +6,13 @@ Well, this is Python, so no interfaces.
 Use protocols, "duck typing" polymorphism and structural subtyping, Luke.
 """
 
-from typing import TYPE_CHECKING
+from typing import Collection
 from typing import Protocol
+from typing import Self
 
-if TYPE_CHECKING:
-    from typing import Self
-    from uuid import UUID
-
-    from .models import Author
-    from .models import Book
+from app.entities.models import ID
+from app.entities.models import Author
+from app.entities.models import Book
 
 
 class AuthorRepo(Protocol):
@@ -22,42 +20,39 @@ class AuthorRepo(Protocol):
     This is how any Author repo MUST act.
     """
 
-    def get_all(self: "Self") -> list["Author"]:
-        """
-        Use this to get all Author objects.
-        """
-        ...
-
-    def create(
-        self: "Self",
-        *,
-        name: str,
-    ) -> "Author":
+    def create(self: Self, /, *, name: str) -> Author:
         """
         Use this to create a new Author object.
         """
         ...
 
-    def delete(
-        self: "Self",
-        *,
-        # todo: #6 id to rename, to positional
-        id: "UUID",  # noqa: A002
-    ) -> None:
+    def delete(self: Self, author_id: ID, /) -> None:
         """
-        Use this to delete Author object using its id (pk).
+        Use this to delete Author object using its ID.
         """
         ...
 
-    def update(
-        self: "Self",
-        *,
-        # todo: #6 id to rename, to positional
-        id: "UUID",  # noqa: A002
-        name: str,
-    ) -> "Author":
+    def get_all(self: Self, /) -> list[Author]:
         """
-        Use this to update Author with new data using its id (pk).
+        Use this to get all Author objects.
+        """
+        ...
+
+    def get_by_id(self: Self, author_id: ID, /) -> Author | None:
+        """
+        Use this to get Author by ID.
+        """
+        ...
+
+    def get_by_name(self: Self, name: str, /) -> Author | None:
+        """
+        Use this to get Author by name.
+        """
+        ...
+
+    def update(self: Self, author_id: ID, /, *, name: str) -> Author:
+        """
+        Use this to update Author with new data using its ID.
         """
         ...
 
@@ -68,42 +63,49 @@ class BookRepo(Protocol):
     """
 
     def create(
-        self: "Self",
+        self: Self,
+        /,
         *,
-        author_ids: list["UUID"],
+        author_ids: Collection[ID],
         title: str,
-    ) -> "Book":
+    ) -> Book:
         """
         Use this to create a new Book object.
         """
         ...
 
-    def delete(
-        self: "Self",
-        # todo: #6 id to rename
-        id: "UUID",  # noqa: A002,VNE003
-    ) -> None:
+    def delete(self: Self, book_id: ID, /) -> None:
         """
-        Use this to delete Book object using its id (pk).
+        Use this to delete Book object using its ID.
         """
         ...
 
-    def get_all(self: "Self") -> list["Book"]:
+    def get_all(self: Self, /) -> list[Book]:
         """
         Use this to get all Book objects.
         """
         ...
 
+    def get_by_id(self: Self, book_id: ID, /) -> Book | None:
+        """
+        Use this to get Book by ID.
+        """
+        ...
+
+    def get_by_title(self: Self, title: str, /) -> Book | None:
+        """
+        Use this to get Book by title.
+        """
+        ...
+
     def update(
-        self: "Self",
-        # todo: #6 id to rename
-        id: "UUID",  # noqa: A002,VNE003
+        self: Self,
+        book_id: ID,
+        /,
         *,
-        # todo: #6 use undefined as default
-        author_ids: list["UUID"] | None = None,
-        # todo: #6 use undefined as default
+        author_ids: Collection[ID] | None = None,
         title: str | None = None,
-    ) -> "Book":
+    ) -> Book:
         """
         Use this to update Book with new data using its id (pk).
         """

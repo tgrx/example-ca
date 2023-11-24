@@ -15,12 +15,22 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="Book",
             fields=[
-                ("id", models.UUIDField(primary_key=True, serialize=False)),
-                ("title", models.TextField()),
+                (
+                    "book_id",
+                    models.UUIDField(
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "title",
+                    models.TextField(),
+                ),
                 (
                     "authors",
                     models.ManyToManyField(
-                        related_name="books", to="app_api_v1.author"
+                        related_name="books",
+                        to="app_api_v1.author",
                     ),
                 ),
             ],

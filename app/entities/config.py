@@ -1,9 +1,13 @@
+from typing import final
+
+from pydantic import StrictStr
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
 from app.entities import consts
 
 
+@final
 class Config(BaseSettings):
     """
     The app's config.
@@ -21,9 +25,9 @@ class Config(BaseSettings):
     )
 
     MODE_DEBUG: bool = False
-    PRIMARY_DATABASE_URL: str
-    SECRET_KEY: str
-    TEST_URL: str
+    PRIMARY_DATABASE_URL: StrictStr
+    SECRET_KEY: StrictStr
+    TEST_URL: StrictStr
 
 
 __all__ = ("Config",)

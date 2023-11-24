@@ -8,40 +8,41 @@ NamedTuple: hardcore.
 """
 
 from typing import Annotated
+from typing import final
 from uuid import UUID
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic.functional_validators import BeforeValidator
 
-default_model_config = ConfigDict(
-    extra="forbid",
-    from_attributes=True,
-    frozen=True,
-    loc_by_alias=True,
-    strict=True,
-)
+
+def to_uuid(value: str | UUID, /) -> UUID:
+    return value if isinstance(value, UUID) else UUID(value)
 
 
-def uuid_to_str(_value: str | UUID) -> UUID:
-    return _value if isinstance(_value, UUID) else UUID(_value)
+ID = Annotated[UUID, BeforeValidator(to_uuid)]
 
 
-UUIDStr = Annotated[UUID, BeforeValidator(uuid_to_str)]
+class Model(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        from_attributes=True,
+        frozen=True,
+        loc_by_alias=True,
+        strict=True,
+    )
 
 
-class Author(BaseModel):
-    model_config = default_model_config
-
-    id: UUIDStr  # noqa: A003,VNE003
+@final
+class Author(Model):
+    author_id: ID
     name: str
 
 
-class Book(BaseModel):
-    model_config = default_model_config
-
+@final
+class Book(Model):
     authors: list[Author]
-    id: UUIDStr  # noqa: A003,VNE003
+    book_id: ID
     title: str
 
 

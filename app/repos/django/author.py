@@ -1,66 +1,63 @@
-from typing import TYPE_CHECKING
-from typing import Type
+from typing import final
 from uuid import uuid4
 
 import attrs
 
+from app.entities.models import ID
 from app.entities.models import Author
-
-if TYPE_CHECKING:
-    from uuid import UUID
-
-    from app_api_v1.models import Author as AuthorDjangoModel
+from app_api_v1.models import Author as OrmAuthor
 
 
+@final
 @attrs.frozen(kw_only=True, slots=True)
 class AuthorRepo:
-    model: Type["AuthorDjangoModel"]  # to untangle from non-django code
-
-    def create(
-        self,
-        *,
-        name: str,
-    ) -> "Author":
-        record = self.model(
-            id=uuid4(),
-            name=name,
-        )
-
-        # todo: what if obj already exist, or another integrity error?
-        # todo: what if db is down?
+    def create(self, /, *, name: str) -> Author:
+        author_id = uuid4()
+        record = OrmAuthor(name=name, pk=author_id)
         record.save()
-
         author = Author.model_validate(record)
 
         return author
 
-    def delete(
-        self,
-        *,
-        id: "UUID",  # noqa: A002
-    ) -> None:
+    def delete(self, author_id: ID, /) -> None:
         try:
-            record = self.model.objects.get(id=id)
-            # todo: what if integrity error?
-            # todo: what if db is down?
+            record = OrmAuthor.objects.get(pk=author_id)
             record.delete()
-        except self.model.DoesNotExist:
+        except OrmAuthor.DoesNotExist:
             pass
 
-    def get_all(self) -> list["Author"]:
-        records = self.model.objects.all()
+    def get_all(self, /) -> list[Author]:
+        records = OrmAuthor.objects.all()
         authors = [Author.model_validate(record) for record in records]
         return authors
 
-    def update(
-        self,
-        *,
-        id: "UUID",  # noqa: A002
-        name: str,
-    ) -> "Author":
-        record = self.model.objects.get(pk=id)
+    def get_by_name(self, name: str, /) -> Author | None:
+        author: Author | None
+
+        try:
+            record = OrmAuthor.objects.get(name=name)
+            author = Author.model_validate(record)
+        except OrmAuthor.DoesNotExist:
+            author = None
+
+        return author
+
+    def get_by_id(self, author_id: ID, /) -> Author | None:
+        author: Author | None
+
+        try:
+            record = OrmAuthor.objects.get(pk=author_id)
+            author = Author.model_validate(record)
+        except OrmAuthor.DoesNotExist:
+            author = None
+
+        return author
+
+    def update(self, author_id: ID, /, *, name: str) -> Author:
+        record = OrmAuthor.objects.get(pk=author_id)
         record.name = name
         record.save()
+
         author = Author.model_validate(record)
         return author
 

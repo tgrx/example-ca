@@ -1,16 +1,13 @@
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from app.entities.interfaces import AuthorRepo
-    from app.entities.models import Author
-    from app.usecases.author import FindAuthorsUseCase
+from app.entities.interfaces import AuthorRepo
+from app.entities.models import Author
+from app.usecases.author import FindAuthorsUseCase
 
 
 def test_usecase_no_filter(
     *,
-    author_repo: "AuthorRepo",
-    find_authors: "FindAuthorsUseCase",
-    installed_authors: list["Author"],
+    author_repo: AuthorRepo,
+    find_authors: FindAuthorsUseCase,
+    installed_authors: list[Author],
 ) -> None:
     authors = find_authors()
 
@@ -18,13 +15,13 @@ def test_usecase_no_filter(
     assert authors == author_repo.get_all()
 
 
-def test_usecase_filter_by_id(
+def test_usecase_filter_by_pk(
     *,
-    find_authors: "FindAuthorsUseCase",
-    installed_authors: list["Author"],
+    find_authors: FindAuthorsUseCase,
+    installed_authors: list[Author],
 ) -> None:
     installed_author = installed_authors[-1]
-    authors = find_authors(id=installed_author.id)
+    authors = find_authors(author_id=installed_author.author_id)
 
     assert len(authors) == 1
     author = authors[0]
@@ -35,8 +32,8 @@ def test_usecase_filter_by_id(
 
 def test_usecase_filter_by_name(
     *,
-    find_authors: "FindAuthorsUseCase",
-    installed_authors: list["Author"],
+    find_authors: FindAuthorsUseCase,
+    installed_authors: list[Author],
 ) -> None:
     authors = find_authors(name="author b")
 

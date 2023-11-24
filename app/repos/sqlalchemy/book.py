@@ -1,71 +1,54 @@
-from typing import TYPE_CHECKING
-from typing import cast
-from uuid import UUID
+from typing import Collection
+from typing import final
 from uuid import uuid4
 
 import attrs
 import sqlalchemy as sa
+from sqlalchemy import Connection
+from sqlalchemy import Engine
 from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.dialects.postgresql import insert
 
+from app.entities.models import ID
 from app.entities.models import Book
+from app.entities.models import to_uuid
 from app.repos.sqlalchemy.tables import table_authors
 from app.repos.sqlalchemy.tables import table_books
 from app.repos.sqlalchemy.tables import table_books_authors
 
-if TYPE_CHECKING:
-    from sqlalchemy import Connection
-    from sqlalchemy import Engine
 
-
+@final
 @attrs.frozen(kw_only=True, slots=True)
 class BookRepo:
-    engine: "Engine"
+    engine: Engine
 
-    def create(
-        self,
-        *,
-        author_ids: list["UUID"],
-        title: str,
-    ) -> "Book":
-        conn: "Connection"
+    def create(self, /, *, author_ids: Collection[ID], title: str) -> Book:
+        conn: Connection
         with self.engine.begin() as conn:
-            book_id = self._create_book_without_relations(
-                conn,
-                title=title,
-            )
-            self._assign_authors_on_book(
-                conn,
-                author_ids=author_ids,
-                book_id=book_id,
-            )
-            book = self._get_book_by_id(
-                conn,
-                id=book_id,
-            )
+            book_id = self._create_book_without_relations(conn, title=title)
+            self._assign_authors(conn, book_id, author_ids=author_ids)
+            book = self._get_by_id(conn, book_id)
+
         return book
 
-    def delete(
-        self,
-        id: "UUID",  # noqa: A002,VNE003
-    ) -> None:
+    def delete(self, book_id: ID, /) -> None:
         stmt_books_authors = table_books_authors.delete().where(
-            table_books_authors.c.book_id == id,
+            table_books_authors.c.book_id == book_id,
         )
         stmt_books = table_books.delete().where(
-            table_books.c.id == id,
+            table_books.c.book_id == book_id,
         )
 
-        conn: "Connection"
+        conn: Connection
         with self.engine.begin() as conn:
             # todo: what if db is down?
             conn.execute(stmt_books_authors)
             conn.execute(stmt_books)
 
-    def get_all(self) -> list["Book"]:
+    def get_all(self, /) -> list[Book]:
         stmt = self.__stmt_all_books()
 
-        conn: "Connection"
+        conn: Connection
         with self.engine.begin() as conn:
             # todo: what if db is down?
             cursor = conn.execute(stmt)
@@ -73,63 +56,84 @@ class BookRepo:
 
         return books
 
-    def update(
-        self,
-        id: "UUID",  # noqa: A002,VNE003
-        *,
-        # todo: #6 use undefined as default
-        author_ids: list["UUID"] | None = None,
-        # todo: #6 use undefined as default
-        title: str | None = None,
-    ) -> "Book":
-        conn: "Connection"
+    def get_by_id(self, book_id: ID, /) -> Book | None:
+        conn: Connection
         with self.engine.begin() as conn:
-            if title is not None:
-                self._update_book(
-                    conn,
-                    id,
-                    title=title,
-                )
-            if author_ids is not None:
-                self._assign_authors_on_book(
-                    conn,
-                    author_ids=author_ids,
-                    book_id=id,
-                )
-            book = self._get_book_by_id(
-                conn,
-                id=id,
-            )
+            book = self._get_by_id(conn, book_id)
 
         return book
 
-    def _assign_authors_on_book(
+    def get_by_title(self, title: str, /) -> Book | None:
+        stmt = (
+            self.__stmt_all_books()
+            .where(table_books.c.title == title)
+            .limit(1)
+        )
+
+        conn: Connection
+        with self.engine.begin() as conn:
+            # todo: what if db is down?
+            cursor = conn.execute(stmt)
+            row = cursor.fetchone()
+            book = Book.model_validate(row) if row else None
+
+        return book
+
+    def update(
         self,
-        conn: "Connection",
-        book_id: "UUID",
-        author_ids: list["UUID"],
+        book_id: ID,
+        /,
+        *,
+        author_ids: Collection[ID] | None = None,
+        title: str | None = None,
+    ) -> Book:
+        conn: Connection
+        with self.engine.begin() as conn:
+            if title is not None:
+                self._update_book(conn, book_id, title=title)
+
+            if author_ids is not None:
+                self._assign_authors(conn, book_id, author_ids=author_ids)
+
+            book = self._get_by_id(conn, book_id)
+
+        return book
+
+    def _assign_authors(
+        self,
+        conn: Connection,
+        book_id: ID,
+        /,
+        *,
+        author_ids: Collection[ID],
     ) -> None:
+        author_ids = sorted(set(author_ids))
+
         values = [
-            {"book_id": book_id, "author_id": author_id}
+            {
+                table_books_authors.c.author_id: author_id,
+                table_books_authors.c.book_id: book_id,
+            }
             for author_id in author_ids
         ]
+
         stmt = insert(table_books_authors).values(values)
         conn.execute(stmt)
 
     def _create_book_without_relations(
         self,
-        conn: "Connection",
+        conn: Connection,
+        /,
         *,
         title: str,
-    ) -> "UUID":
+    ) -> ID:
+        book_id = uuid4()
+        values = {table_books.c.book_id: book_id, table_books.c.title: title}
         stmt = (
             insert(table_books)
-            .values(
-                id=uuid4(),
-                title=title,
-            )
+            .values(values)
             .returning(
-                table_books.c.id,
+                table_books.c.book_id,
             )
         )
 
@@ -137,18 +141,15 @@ class BookRepo:
         row = cursor.fetchone()
 
         assert row is not None, "no results returned after creating a book"
-        book_id = cast(UUID, row.id)
+        book_id = to_uuid(row.book_id)
 
         return book_id
 
-    def _get_book_by_id(
-        self,
-        conn: "Connection",
-        *,
-        id: "UUID",  # noqa: A002
-    ) -> "Book":
-        stmt = self.__stmt_all_books().where(
-            table_books.c.id == id,
+    def _get_by_id(self, conn: Connection, book_id: ID, /) -> Book:
+        stmt = (
+            self.__stmt_all_books()
+            .where(table_books.c.book_id == book_id)
+            .limit(1)
         )
 
         cursor = conn.execute(stmt)
@@ -159,35 +160,38 @@ class BookRepo:
 
     def _update_book(
         self,
-        conn: "Connection",
-        id: "UUID",  # noqa: A002,VNE003
+        conn: Connection,
+        book_id: ID,
+        /,
+        *,
         title: str,
     ) -> None:
+        values = {table_books.c.title: title}
+
         stmt = (
             sa.update(table_books)
-            .values(
-                title=title,
-            )
-            .where(table_books.c.id == id)
+            .values(values)
+            .where(table_books.c.book_id == book_id)
         )
+
         conn.execute(stmt)
 
     @staticmethod
     def __stmt_all_books() -> sa.Select:
         stmt = (  # noqa: ECE001
             sa.select(
-                table_books.c.id,
+                table_books.c.book_id,
                 table_books.c.title,
                 sa.func.json_agg(
                     aggregate_order_by(  # type: ignore
                         sa.func.json_build_object(
-                            "id",
-                            sa.cast(table_authors.c.id, sa.UUID),
+                            "author_id",
+                            sa.cast(table_authors.c.author_id, sa.UUID),
                             "name",
                             table_authors.c.name,
                         ),
-                        table_authors.c.name,
-                        table_authors.c.id,
+                        table_authors.c.name.asc(),
+                        table_authors.c.author_id.asc(),
                     ),
                 ).label("authors"),
             )
@@ -196,18 +200,18 @@ class BookRepo:
             )
             .outerjoin(
                 table_books_authors,
-                table_books_authors.c.book_id == table_books.c.id,
+                table_books_authors.c.book_id == table_books.c.book_id,
             )
             .outerjoin(
                 table_authors,
-                table_authors.c.id == table_authors.c.id,
+                table_authors.c.author_id == table_books_authors.c.author_id,
             )
             .order_by(
                 table_books.c.title,
-                table_books.c.id,
+                table_books.c.book_id,
             )
             .group_by(
-                table_books.c.id,
+                table_books.c.book_id,
             )
         )
 

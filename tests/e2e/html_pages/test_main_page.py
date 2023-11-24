@@ -1,25 +1,20 @@
 import hashlib
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from httpx import Client
-    from httpx import Response
+from httpx import Client
+from httpx import Response
 
 
-def test_main_page_is_available(
-    *,
-    web_browser: "Client",
-) -> None:
+def test_main_page_is_available(*, web_browser: Client) -> None:
     response = web_browser.get("/")
     assert_page_is_avaliable(response)
     assert_page_content_is_valid(response.text)
 
 
-def assert_page_is_avaliable(response: "Response") -> None:
+def assert_page_is_avaliable(response: Response, /) -> None:
     assert response.status_code == 200, "page on / is not available"
 
 
-def assert_page_content_is_valid(page: str) -> None:
+def assert_page_content_is_valid(page: str, /) -> None:
     hasher = hashlib.sha224()
     hasher.update(page.encode())
 
