@@ -1,4 +1,6 @@
 from typing import Any
+from typing import Final
+from typing import final
 
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -12,13 +14,14 @@ from app.usecases.book import FindBooksUseCase
 from app.usecases.book import UpdateBookUseCase
 
 
+@final
 class BookViewSet(ViewSet):
-    repo = BookRepo()
+    repo: Final = BookRepo()
 
-    create_book = CreateBookUseCase(repo=repo)
-    delete_book = DeleteBookUseCase(repo=repo)
-    find_books = FindBooksUseCase(repo=repo)
-    update_book = UpdateBookUseCase(repo=repo)
+    create_book: Final = CreateBookUseCase(repo=repo)
+    delete_book: Final = DeleteBookUseCase(repo=repo)
+    find_books: Final = FindBooksUseCase(repo=repo)
+    update_book: Final = UpdateBookUseCase(repo=repo)
 
     def create(self, request: Request) -> Response:
         book = self.create_book(
@@ -58,7 +61,7 @@ class BookViewSet(ViewSet):
         return response
 
     def retrieve(self, request: Request, pk: str) -> Response:
-        payload: dict[str, Any] = {}
+        payload: Final[dict[str, Any]] = {}
         status = 500
 
         book_id = to_uuid(pk)

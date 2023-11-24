@@ -17,7 +17,10 @@ from pydantic.functional_validators import BeforeValidator
 
 
 def to_uuid(value: str | UUID, /) -> UUID:
-    return value if isinstance(value, UUID) else UUID(value)
+    try:
+        return value if isinstance(value, UUID) else UUID(value)
+    except TypeError as err:
+        raise ValueError(f"invalid uuid {value=!r}: {err}")
 
 
 ID = Annotated[UUID, BeforeValidator(to_uuid)]

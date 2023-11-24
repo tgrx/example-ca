@@ -5,7 +5,6 @@ import attrs
 import sqlalchemy as sa
 from sqlalchemy import Connection
 from sqlalchemy import Engine
-from sqlalchemy.dialects.postgresql import insert
 
 from app.entities.models import ID
 from app.entities.models import Author
@@ -27,7 +26,7 @@ class AuthorRepo:
         }
 
         stmt = (
-            insert(table_authors)
+            sa.insert(table_authors)
             .values(values)
             .returning(
                 table_authors.c.author_id,
@@ -89,6 +88,27 @@ class AuthorRepo:
             cursor = conn.execute(stmt)
             row = cursor.fetchone()
             author = Author.model_validate(row) if row else None
+
+        return author
+
+    def update(self, author_id: ID, /, *, name: str) -> Author:
+        values = {table_authors.c.name: name}
+        stmt = (
+            sa.update(table_authors)
+            .values(values)
+            .where(table_authors.c.author_id == author_id)
+            .returning(
+                table_authors.c.author_id,
+                table_authors.c.name,
+            )
+        )
+
+        conn: Connection
+        with self.engine.begin() as conn:
+            cursor = conn.execute(stmt)
+            row = cursor.fetchone()
+            assert row is not None
+            author = Author.model_validate(row)
 
         return author
 

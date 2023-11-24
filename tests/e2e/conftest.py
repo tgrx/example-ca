@@ -124,4 +124,5 @@ def get_all_ids(conn: Connection, table: Table, /) -> frozenset[int | UUID]:
     stmt = sa.select(pk).select_from(table)
     rows = conn.execute(stmt).fetchall()
     ids = frozenset(row[0] for row in rows)
+
     return ids

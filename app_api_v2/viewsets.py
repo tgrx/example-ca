@@ -1,4 +1,6 @@
 from typing import Any
+from typing import Final
+from typing import final
 
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -12,13 +14,14 @@ from app.usecases.author import FindAuthorsUseCase
 from app.usecases.author import UpdateAuthorUseCase
 
 
+@final
 class AuthorViewSet(ViewSet):
-    repo = AuthorRepo()
+    repo: Final = AuthorRepo()
 
-    create_author = CreateAuthorUseCase(repo=repo)
-    delete_author = DeleteAuthorUseCase(repo=repo)
-    find_authors = FindAuthorsUseCase(repo=repo)
-    update_author = UpdateAuthorUseCase(repo=repo)
+    create_author: Final = CreateAuthorUseCase(repo=repo)
+    delete_author: Final = DeleteAuthorUseCase(repo=repo)
+    find_authors: Final = FindAuthorsUseCase(repo=repo)
+    update_author: Final = UpdateAuthorUseCase(repo=repo)
 
     def create(self, request: Request) -> Response:
         author = self.create_author(name=request.data["name"])
