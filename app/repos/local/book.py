@@ -17,6 +17,7 @@ class BookRepo:
 
     def create(self, /, *, author_ids: Collection[ID], title: str) -> Book:
         authors = [self.index_authors[author_id] for author_id in author_ids]
+        authors.sort(key=lambda _author: (_author.name, _author.author_id))
         book_id = uuid4()
         book = Book(authors=authors, book_id=book_id, title=title)
         self.index_books[book_id] = book
@@ -59,11 +60,12 @@ class BookRepo:
             return book
 
         if author_ids is not None:
-            new_authors = [
+            authors = [
                 self.index_authors[author_id] for author_id in author_ids
             ]
+            authors.sort(key=lambda _a: (_a.name, _a.author_id))
         else:
-            new_authors = book.authors
+            authors = book.authors
 
         if title is not None:
             new_title = title
@@ -72,7 +74,7 @@ class BookRepo:
 
         book = book.model_copy(
             update={
-                "authors": new_authors,
+                "authors": authors,
                 "title": new_title,
             },
         )
