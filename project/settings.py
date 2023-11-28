@@ -1,9 +1,11 @@
+from typing import Final
+
 import dj_database_url
 
 from app.entities import consts
 from app.entities.config import Config
 
-config = Config()
+config: Final = Config()
 
 
 SECRET_KEY = config.SECRET_KEY
@@ -58,8 +60,9 @@ TEMPLATES = [
 WSGI_APPLICATION = "project.wsgi.application"
 
 
+_db_conf = dj_database_url.parse(config.PRIMARY_DATABASE_URL)
 DATABASES = {
-    "default": dj_database_url.parse(config.PRIMARY_DATABASE_URL),
+    "default": _db_conf,
 }
 
 _pvpkg = "django.contrib.auth.password_validation"

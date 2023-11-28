@@ -1,12 +1,14 @@
+from typing import Final
+
 import sqlalchemy as sa
 
-metadata = sa.MetaData()
+metadata: Final = sa.MetaData()
 
-table_authors = sa.Table(
+table_authors: Final = sa.Table(
     "authors",
     metadata,
     sa.Column(
-        "id",
+        "author_id",
         sa.UUID(as_uuid=True),
         primary_key=True,
     ),
@@ -19,11 +21,11 @@ table_authors = sa.Table(
 )
 
 
-table_books = sa.Table(
+table_books: Final = sa.Table(
     "books",
     metadata,
     sa.Column(
-        "id",
+        "book_id",
         sa.UUID(as_uuid=True),
         primary_key=True,
     ),
@@ -35,13 +37,13 @@ table_books = sa.Table(
     ),
 )
 
-table_books_authors = sa.Table(
+table_books_authors: Final = sa.Table(
     "books_authors",
     metadata,
     sa.Column(
         "author_id",
         sa.ForeignKey(
-            table_authors.c.id,
+            table_authors.c.author_id,
             ondelete="CASCADE",
             onupdate="CASCADE",
         ),
@@ -49,7 +51,7 @@ table_books_authors = sa.Table(
     sa.Column(
         "book_id",
         sa.ForeignKey(
-            table_books.c.id,
+            table_books.c.book_id,
             ondelete="CASCADE",
             onupdate="CASCADE",
         ),
@@ -57,8 +59,8 @@ table_books_authors = sa.Table(
     sa.Column(
         "id",
         sa.BigInteger,
-        primary_key=True,
         autoincrement=True,
+        primary_key=True,
     ),
 )
 

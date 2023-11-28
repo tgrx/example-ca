@@ -6,8 +6,10 @@ from app.entities.models import Author
 
 
 @pytest.fixture(scope="function")
-def installed_author(*, author_repo: AuthorRepo, faker: Faker) -> Author:
-    name = faker.name()
-    author = author_repo.create(name=name)
-
+def author(
+    *,
+    faker: Faker,
+    author_repo: AuthorRepo,
+) -> Author:
+    author = author_repo.create(name=faker.name())
     return author

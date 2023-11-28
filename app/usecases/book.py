@@ -1,100 +1,98 @@
-from typing import TYPE_CHECKING
-from typing import Generator
-from uuid import UUID
+from typing import Collection
+from typing import final
 
 import attrs
 
-if TYPE_CHECKING:
-    from app.entities.interfaces import BookRepo
-    from app.entities.models import Book
+from app.entities.interfaces import BookRepo
+from app.entities.models import ID
+from app.entities.models import Book
 
 
-@attrs.frozen(kw_only=True, slots=True)
-class GetAllBooksUseCase:
-    """
-    Use case: Get all books.
-    """
-
-    repo: "BookRepo"
-
-    def __call__(self) -> list["Book"]:
-        books = self.repo.get_all()
-        return books
-
-
+@final
 @attrs.frozen(kw_only=True, slots=True)
 class CreateBookUseCase:
     """
     Use Case: Create a book.
     """
 
-    repo: "BookRepo"
+    repo: BookRepo
 
-    def __call__(
-        self,
-        *,
-        author_ids: list["UUID"],
-        title: str,
-    ) -> "Book":
-        book = self.repo.create(
-            author_ids=author_ids,
-            title=title,
-        )
+    def __call__(self, /, *, author_ids: Collection[ID], title: str) -> Book:
+        book = self.repo.create(author_ids=author_ids, title=title)
+
         return book
 
 
+@final
+@attrs.frozen(kw_only=True, slots=True)
+class DeleteBookUseCase:
+    """
+    Use Case: Delete a book.
+    """
+
+    repo: BookRepo
+
+    def __call__(self, book_id: ID, /) -> None:
+        self.repo.delete(book_id)
+
+
+@final
 @attrs.frozen(kw_only=True, slots=True)
 class FindBooksUseCase:
     """
     Use case: Find books by attributes.
     """
 
-    repo: "BookRepo"
+    repo: BookRepo
 
     def __call__(
         self,
+        /,
         *,
-        id: UUID | None = None,  # noqa:A002
+        book_id: ID | None = None,
         title: str | None = None,
-    ) -> list["Book"]:
-        books: list["Book"] | Generator["Book", None, None]
-        books = self.repo.get_all()
+    ) -> list[Book]:
+        books: list[Book] = []
 
-        if id is not None:
-            books = (book for book in books if book.id == id)
+        if all(arg is None for arg in (book_id, title)):
+            books.extend(self.repo.get_all())
+        elif book_id is not None:
+            book = self.repo.get_by_id(book_id)
+            if book:
+                books.append(book)
+        elif title is not None:
+            book = self.repo.get_by_title(title)
+            if book:
+                books.append(book)
 
-        if title is not None:
-            books = (book for book in books if book.title == title)
-
-        return list(books)
+        return books
 
 
+@final
 @attrs.frozen(kw_only=True, slots=True)
 class UpdateBookUseCase:
     """
     Use Case: Update a book.
     """
 
-    repo: "BookRepo"
+    repo: BookRepo
 
     def __call__(
         self,
-        id: "UUID",  # noqa: A002,VNE003
+        book_id: ID,
+        /,
         *,
-        author_ids: list["UUID"] | None = None,
+        author_ids: Collection[ID] | None = None,
         title: str | None = None,
-    ) -> "Book":
-        book = self.repo.update(
-            id,
-            author_ids=author_ids,
-            title=title,
-        )
+    ) -> Book:
+        book = self.repo.update(book_id, author_ids=author_ids, title=title)
+
         return book
 
 
 __all__ = (
     "CreateBookUseCase",
+    "DeleteBookUseCase",
     "FindBooksUseCase",
-    "GetAllBooksUseCase",
     "UpdateBookUseCase",
 )

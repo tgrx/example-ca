@@ -1,8 +1,10 @@
 from typing import Any
+from typing import final
 
 import orjson
 
 
+@final
 class AppClientError(RuntimeError):
     def __init__(
         self,

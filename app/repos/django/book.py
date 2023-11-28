@@ -1,112 +1,145 @@
-from typing import TYPE_CHECKING
-from typing import Type
+from typing import Collection
+from typing import final
 from uuid import uuid4
 
 import attrs
 
+from app.entities.models import ID
 from app.entities.models import Author
 from app.entities.models import Book
-
-if TYPE_CHECKING:
-    from uuid import UUID
-
-    from app_api_v3.models import Book as BookDjangoModel
+from app_api_v3.models import Book as OrmBook
 
 
+@final
 @attrs.frozen(kw_only=True, slots=True)
 class BookRepo:
-    model: Type["BookDjangoModel"]  # to untangle repo from non-django code
+    def create(self, /, *, author_ids: Collection[ID], title: str) -> Book:
+        book_id = uuid4()
+        orm_book = OrmBook(pk=book_id, title=title)
+        orm_book.save()
 
-    def create(
-        self,
-        *,
-        author_ids: list["UUID"],
-        title: str,
-    ) -> "Book":
-        # todo: transaction
-        record_book = self.model(
-            id=uuid4(),
-            title=title,
-        )
-        # todo: what if obj already exist, or another integrity error?
-        # todo: what if db is down?
-        record_book.save()
+        author_ids = sorted(set(author_ids))
+        orm_book.authors.add(*author_ids)  # type: ignore
 
-        # todo: check that no authors => error
-        record_book.authors.add(*author_ids)  # type: ignore  # pk is uuid
+        authors = [
+            Author.model_validate(orm_author)
+            for orm_author in orm_book.authors.order_by("name", "pk").all()
+        ]
 
         book = Book(
-            authors=[
-                Author.model_validate(record_author)
-                for record_author in record_book.authors.order_by(
-                    "name", "pk"
-                ).all()
-            ],
-            id=record_book.id,
-            title=record_book.title,
+            authors=authors,
+            book_id=orm_book.pk,
+            title=orm_book.title,
         )
 
         return book
 
-    def delete(
-        self,
-        id: "UUID",  # noqa: A002,VNE003
-    ) -> None:
+    def delete(self, book_id: ID, /) -> None:
         try:
-            record = self.model.objects.get(pk=id)
-            # todo: what if integrity error?
-            # todo: what if db is down?
+            record = OrmBook.objects.get(pk=book_id)
             record.delete()
-        except self.model.DoesNotExist:
+
+        except OrmBook.DoesNotExist:
             pass
 
-    def get_all(self) -> list["Book"]:
-        records = self.model.objects.all()
+    def get_all(self, /) -> list[Book]:
+        orm_books = OrmBook.objects.prefetch_related("authors").all()
+
         books = [
             Book(
-                id=record_book.id,
-                title=record_book.title,
                 authors=[
-                    Author.model_validate(record_author)
-                    for record_author in record_book.authors.order_by(
-                        "name", "pk"
+                    Author.model_validate(orm_author)
+                    for orm_author in orm_book.authors.order_by(
+                        "name",
+                        "pk",
                     ).all()
                 ],
+                book_id=orm_book.pk,
+                title=orm_book.title,
             )
-            for record_book in records
+            for orm_book in orm_books
         ]
+
         return books
+
+    def get_by_id(self, book_id: ID, /) -> Book | None:
+        book: Book | None
+
+        try:
+            orm_books = OrmBook.objects.prefetch_related("authors")
+            orm_book = orm_books.get(pk=book_id)
+
+            authors = [
+                Author.model_validate(orm_author)
+                for orm_author in orm_book.authors.order_by("name", "pk").all()
+            ]
+
+            book = Book(
+                authors=authors,
+                book_id=orm_book.pk,
+                title=orm_book.title,
+            )
+
+        except OrmBook.DoesNotExist:
+            book = None
+
+        return book
+
+    def get_by_title(self, title: str, /) -> Book | None:
+        book: Book | None
+
+        try:
+            orm_books = OrmBook.objects.prefetch_related("authors")
+            orm_book = orm_books.get(title=title)
+
+            authors = [
+                Author.model_validate(orm_author)
+                for orm_author in orm_book.authors.order_by("name", "pk").all()
+            ]
+
+            book = Book(
+                authors=authors,
+                book_id=orm_book.pk,
+                title=orm_book.title,
+            )
+
+        except OrmBook.DoesNotExist:
+            book = None
+
+        return book
 
     def update(
         self,
-        id: "UUID",  # noqa: A002,VNE003
+        book_id: ID,
+        /,
         *,
-        author_ids: list["UUID"] | None = None,
+        author_ids: Collection[ID] | None = None,
         title: str | None = None,
-    ) -> "Book":
-        # todo: at least one of title, author_ids
-        record_book = self.model.objects.get(pk=id)
+    ) -> Book:
+        orm_book = OrmBook.objects.get(pk=book_id)
 
-        # todo: transaction
         if title is not None:
-            record_book.title = title
+            orm_book.title = title
 
         if author_ids is not None:
-            record_book.authors.clear()
-            # todo: what if there are no authors?
-            record_book.authors.add(*author_ids)  # type: ignore  # pk is uuid
+            orm_book.authors.clear()
+            if author_ids:
+                author_ids = sorted(set(author_ids))
+                orm_book.authors.add(*author_ids)  # type: ignore
 
-        record_book.save()
+        orm_book.save()
+
+        authors = [
+            Author.model_validate(orm_author)
+            for orm_author in orm_book.authors.order_by("name", "pk").all()
+        ]
+
         book = Book(
-            authors=[
-                Author.model_validate(record_author)
-                for record_author in record_book.authors.order_by(
-                    "name", "pk"
-                ).all()
-            ],
-            id=record_book.id,
-            title=record_book.title,
+            authors=authors,
+            book_id=orm_book.pk,
+            title=orm_book.title,
         )
+
         return book
 
 

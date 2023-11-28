@@ -1,31 +1,29 @@
-from typing import TYPE_CHECKING
 from typing import Iterator
 from uuid import UUID
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy import Connection
+from sqlalchemy import Engine
+from sqlalchemy import Table
 from sqlalchemy import create_engine
+from sqlalchemy import inspect
 
+from app.entities.config import Config
+from app.entities.models import ID
+from app.entities.models import Author
 from app.repos.sqlalchemy.author import AuthorRepo
 from app.repos.sqlalchemy.book import BookRepo
 from app.repos.sqlalchemy.tables import table_authors
 from app.repos.sqlalchemy.tables import table_books
 from app.repos.sqlalchemy.tables import table_books_authors
 
-if TYPE_CHECKING:
-    from sqlalchemy import Connection
-    from sqlalchemy import Engine
-    from sqlalchemy import Table
-
-    from app.entities.config import Config
-    from app.entities.models import Author
-
 
 @pytest.fixture(scope="session")
 def installed_authors(
     *,
-    primary_database_engine: "Engine",
-) -> Iterator[dict["UUID", "Author"]]:
+    primary_database_engine: Engine,
+) -> Iterator[dict[UUID, Author]]:
     repo = AuthorRepo(engine=primary_database_engine)
 
     authors = [
@@ -36,26 +34,26 @@ def installed_authors(
         ]
     ]
 
-    authors_map = {author.id: author for author in authors}
+    authors_map = {author.author_id: author for author in authors}
 
     yield authors_map
 
     for author_id in authors_map:
-        repo.delete(id=author_id)
+        repo.delete(author_id)
 
 
 @pytest.fixture(scope="session")
 def installed_authors_with_books(
     *,
-    installed_authors: dict["UUID", "Author"],
-    primary_database_engine: "Engine",
-) -> Iterator[dict["UUID", "Author"]]:
+    installed_authors: dict[ID, Author],
+    primary_database_engine: Engine,
+) -> Iterator[dict[ID, Author]]:
     repo = BookRepo(engine=primary_database_engine)
 
     books = [
         repo.create(
+            author_ids=[author.author_id],
             title=f"Bio of {author.name}",
-            author_ids=[author.id],
         )
         for author in installed_authors.values()
     ]
@@ -63,25 +61,20 @@ def installed_authors_with_books(
     yield installed_authors
 
     for book in books:
-        repo.delete(id=book.id)
+        repo.delete(book.book_id)
 
 
 @pytest.fixture(scope="session")
-def primary_database_engine(
-    *,
-    config: "Config",
-) -> "Engine":
-    engine = create_engine(
-        config.PRIMARY_DATABASE_URL,
-        echo=config.MODE_DEBUG,
-    )
+def primary_database_engine(*, config: Config) -> Engine:
+    engine = create_engine(config.PRIMARY_DATABASE_URL, echo=config.MODE_DEBUG)
+
     return engine
 
 
 @pytest.fixture(autouse=True, scope="function")
 def warden(
     *,
-    primary_database_engine: "Engine",
+    primary_database_engine: Engine,
     request: pytest.FixtureRequest,
 ) -> Iterator[None]:
     tables = {
@@ -90,7 +83,7 @@ def warden(
         table_books,
     }
 
-    conn: "Connection"
+    conn: Connection
     with primary_database_engine.begin() as conn:
         ids_before_test = {table: get_all_ids(conn, table) for table in tables}
 
@@ -126,8 +119,10 @@ def warden(
         raise AssertionError(msg)
 
 
-def get_all_ids(conn: "Connection", table: "Table") -> frozenset[int | UUID]:
-    stmt = sa.select(table.c.id)
+def get_all_ids(conn: Connection, table: Table, /) -> frozenset[int | UUID]:
+    pk = inspect(table).primary_key.columns[0]
+    stmt = sa.select(pk).select_from(table)
     rows = conn.execute(stmt).fetchall()
-    ids = frozenset(row.id for row in rows)
+    ids = frozenset(row[0] for row in rows)
+
     return ids

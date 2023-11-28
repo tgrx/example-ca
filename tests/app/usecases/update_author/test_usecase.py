@@ -1,24 +1,21 @@
-from typing import TYPE_CHECKING
+from faker import Faker
 
-if TYPE_CHECKING:
-    from faker import Faker
-
-    from app.entities.interfaces import AuthorRepo
-    from app.entities.models import Author
-    from app.usecases.author import UpdateAuthorUseCase
+from app.entities.interfaces import AuthorRepo
+from app.entities.models import Author
+from app.usecases.author import UpdateAuthorUseCase
 
 
 def test_usecase(
     *,
-    author_repo: "AuthorRepo",
-    faker: "Faker",
-    installed_author: "Author",
-    update_author: "UpdateAuthorUseCase",
+    author_repo: AuthorRepo,
+    faker: Faker,
+    installed_author: Author,
+    update_author: UpdateAuthorUseCase,
 ) -> None:
     name = faker.name()
-    author = update_author(id=installed_author.id, name=name)
+    author = update_author(installed_author.author_id, name=name)
 
-    assert author.id == installed_author.id
+    assert author.author_id == installed_author.author_id
     assert author.name != installed_author.name
     assert author.name == name
 

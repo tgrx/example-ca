@@ -13,5 +13,5 @@ class Author(models.Model):
         verbose_name = "Author"
         verbose_name_plural = "Authors"
 
-    id = models.UUIDField(primary_key=True)  # noqa: A003,VNE003  # name ok
+    author_id = models.UUIDField(primary_key=True)
     name = models.TextField(unique=True)

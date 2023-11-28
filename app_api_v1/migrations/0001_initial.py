@@ -13,7 +13,10 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="Author",
             fields=[
-                ("id", models.UUIDField(primary_key=True, serialize=False)),
+                (
+                    "author_id",
+                    models.UUIDField(primary_key=True, serialize=False),
+                ),
                 ("name", models.TextField(unique=True)),
             ],
             options={

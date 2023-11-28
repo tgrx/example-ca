@@ -16,5 +16,5 @@ class Book(models.Model):
         verbose_name_plural = "Books"
 
     authors = models.ManyToManyField(Author, related_name="books")
-    id = models.UUIDField(primary_key=True)  # noqa: A003,VNE003
+    book_id = models.UUIDField(primary_key=True)
     title = models.TextField()

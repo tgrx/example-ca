@@ -1,16 +1,21 @@
 from contextlib import suppress
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Collection
 from typing import Type
 from typing import TypeVar
 from typing import cast
+from typing import final
 
 import attrs
 import orjson
 import tenacity
+from httpx import Client
+from httpx import Response
 from pydantic import BaseModel
 
+from app.entities.models import ID
+from app.entities.models import Author
+from app.entities.models import Book
 from clientlib.entities import AllAuthorsResponse
 from clientlib.entities import AllBooksResponse
 from clientlib.entities import ApiResponse
@@ -28,16 +33,6 @@ from clientlib.entities import UpdateBookRequest
 from clientlib.entities import UpdateBookResponse
 from clientlib.errors import AppClientError
 
-if TYPE_CHECKING:
-    from uuid import UUID
-
-    from httpx import Client
-    from httpx import Response
-
-    from app.entities.models import Author
-    from app.entities.models import Book
-
-
 T = TypeVar("T")
 
 
@@ -52,19 +47,16 @@ retry = tenacity.retry(
 )
 
 
+@final
 @attrs.frozen(kw_only=True, slots=True)
 class AppClient:
     """
     The very first client of the whole app
     """
 
-    session: "Client"
+    session: Client
 
-    def create_author(
-        self,
-        *,
-        name: str,
-    ) -> "Author":
+    def create_author(self, /, *, name: str) -> Author:
         author = self._api_call(
             method="post",
             path="/api/v2/authors/",
@@ -75,43 +67,32 @@ class AppClient:
 
         return author
 
-    def create_book(
-        self,
-        *,
-        authors: list["UUID"],
-        title: str,
-    ) -> "Book":
+    def create_book(self, /, *, author_ids: list[ID], title: str) -> Book:
         book = self._api_call(
             method="post",
             path="/api/v3/books/",
-            request=CreateBookRequest(authors=authors, title=title),
+            request=CreateBookRequest(authors=author_ids, title=title),
             response_cls=CreateBookResponse,
             statuses=(201,),
         )
 
         return book
 
-    def delete_author_by_id(
-        self,
-        id: "UUID",  # noqa: A002,VNE003
-    ) -> None:
+    def delete_author_by_id(self, author_id: ID, /) -> None:
         return self._api_call(
             method="delete",
-            path=f"/api/v2/authors/{id}/",
+            path=f"/api/v2/authors/{author_id}/",
             response_cls=DeleteAuthorResponse,
         )
 
-    def delete_book_by_id(
-        self,
-        id: "UUID",  # noqa: A002,VNE003
-    ) -> None:
+    def delete_book_by_id(self, book_id: ID, /) -> None:
         return self._api_call(
             method="delete",
-            path=f"/api/v3/books/{id}/",
+            path=f"/api/v3/books/{book_id}/",
             response_cls=DeleteBookResponse,
         )
 
-    def get_all_authors(self) -> list["Author"]:
+    def get_all_authors(self, /) -> list[Author]:
         authors = self._api_call(
             method="get",
             path="/api/v1/authors/",
@@ -120,7 +101,7 @@ class AppClient:
 
         return authors
 
-    def get_all_books(self) -> list["Book"]:
+    def get_all_books(self, /) -> list[Book]:
         books = self._api_call(
             method="get",
             path="/api/v3/books/",
@@ -129,23 +110,17 @@ class AppClient:
 
         return books
 
-    def get_author_by_id(
-        self,
-        id: "UUID",  # noqa: A002,VNE003
-    ) -> "Author":
+    def get_author_by_id(self, author_id: ID, /) -> Author:
         author = self._api_call(
             method="get",
-            path=f"/api/v2/authors/{id}/",
+            path=f"/api/v2/authors/{author_id}/",
             response_cls=GetAuthorResponse,
             statuses=(200, 404),
         )
 
         return author
 
-    def get_author_by_name(
-        self,
-        name: str,  # noqa: A002,VNE003
-    ) -> "Author":
+    def get_author_by_name(self, name: str, /) -> Author:
         authors = self._api_call(
             method="get",
             params={"name": name},
@@ -160,23 +135,17 @@ class AppClient:
 
         return author
 
-    def get_book_by_id(
-        self,
-        id: "UUID",  # noqa: A002,VNE003
-    ) -> "Book":
+    def get_book_by_id(self, book_id: ID, /) -> Book:
         book = self._api_call(
             method="get",
-            path=f"/api/v3/books/{id}/",
+            path=f"/api/v3/books/{book_id}/",
             response_cls=GetBookResponse,
             statuses=(200, 404),
         )
 
         return book
 
-    def get_book_by_title(
-        self,
-        title: str,
-    ) -> "Book":
+    def get_book_by_title(self, title: str, /) -> Book:
         books = self._api_call(
             method="get",
             params={"title": title},
@@ -191,15 +160,10 @@ class AppClient:
 
         return book
 
-    def update_author(
-        self,
-        id: "UUID",  # noqa: A002,VNE003
-        *,
-        name: str,
-    ) -> "Author":
+    def update_author(self, author_id: ID, /, *, name: str) -> Author:
         author = self._api_call(
             method="patch",
-            path=f"/api/v2/authors/{id}/",
+            path=f"/api/v2/authors/{author_id}/",
             request=UpdateAuthorRequest(name=name),
             response_cls=UpdateAuthorResponse,
             statuses=(200,),
@@ -209,15 +173,16 @@ class AppClient:
 
     def update_book(
         self,
-        id: "UUID",  # noqa: A002,VNE003
+        book_id: ID,
+        /,
         *,
-        authors: list["UUID"] | None = None,
+        author_ids: list[ID] | None = None,
         title: str | None = None,
-    ) -> "Book":
+    ) -> Book:
         book = self._api_call(
             method="patch",
-            path=f"/api/v3/books/{id}/",
-            request=UpdateBookRequest(authors=authors, title=title),
+            path=f"/api/v3/books/{book_id}/",
+            request=UpdateBookRequest(authors=author_ids, title=title),
             response_cls=UpdateBookResponse,
             statuses=(200,),
         )
@@ -226,6 +191,7 @@ class AppClient:
 
     def _api_call(
         self,
+        /,
         *,
         method: str,
         params: dict | None = None,
@@ -236,7 +202,12 @@ class AppClient:
     ) -> T:
         content = None
         if request:
-            content = request.model_dump_json(by_alias=True)
+            content = request.model_dump_json(
+                by_alias=True,
+                exclude_defaults=True,
+                exclude_none=True,
+                exclude_unset=True,
+            )
 
         def pretty(body: str | bytes | None) -> Any:
             if body is None:
@@ -251,7 +222,7 @@ class AppClient:
             return body
 
         @retry
-        def _request() -> "Response":
+        def _request() -> Response:
             return self.session.request(
                 content=content,
                 method=method,
