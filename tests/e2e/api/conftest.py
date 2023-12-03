@@ -20,7 +20,7 @@ def http_session(*, config: Config) -> Iterator[Client]:
 
 
 @pytest.fixture(scope="session")
-def client(*, http_session: Client) -> AppClient:
-    app_client = AppClient(session=http_session)
+def client(*, config: Config, http_session: Client) -> AppClient:
+    app_client = AppClient(config=config, session=http_session)
 
     return app_client

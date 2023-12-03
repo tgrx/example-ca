@@ -6,6 +6,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from app.entities.errors import DuplicateAuthorNameError
+from app.entities.errors import LostAuthorError
 from app.entities.models import to_uuid
 from app.repos.django.author import AuthorRepo
 from app.usecases.author import CreateAuthorUseCase
@@ -24,9 +26,12 @@ class AuthorViewSet(ViewSet):
     update_author: Final = UpdateAuthorUseCase(repo=repo)
 
     def create(self, request: Request) -> Response:
-        author = self.create_author(name=request.data["name"])
-        data = author.model_dump()
-        response = Response({"data": data}, status=201)
+        try:
+            author = self.create_author(name=request.data["name"])
+            data = author.model_dump()
+            response = Response({"data": data}, status=201)
+        except DuplicateAuthorNameError as exc:
+            response = Response({"errors": exc.errors}, status=409)
 
         return response
 
@@ -47,9 +52,14 @@ class AuthorViewSet(ViewSet):
 
     def partial_update(self, request: Request, pk: str) -> Response:
         author_id = to_uuid(pk)
-        author = self.update_author(author_id, name=request.data["name"])
-        data = author.model_dump()
-        response = Response({"data": data}, status=200)
+        try:
+            author = self.update_author(author_id, name=request.data["name"])
+            data = author.model_dump()
+            response = Response({"data": data}, status=200)
+        except LostAuthorError as exc:
+            response = Response({"errors": exc.errors}, status=404)
+        except DuplicateAuthorNameError as exc:
+            response = Response({"errors": exc.errors}, status=409)
 
         return response
 
@@ -60,7 +70,7 @@ class AuthorViewSet(ViewSet):
         author_id = to_uuid(pk)
         authors = self.find_authors(author_id=author_id)
         if not authors:
-            payload["errors"] = [f"author with id={author_id} not found"]
+            payload["errors"] = LostAuthorError(author_id=author_id).errors
             status = 404
         else:
             author = authors[0]

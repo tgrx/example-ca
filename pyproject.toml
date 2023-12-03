@@ -65,6 +65,10 @@ warn_untyped_fields = true
 [tool.pytest.ini_options]
 cache_dir = ".local/pytest/"
 console_output_style = "count"
+markers = '''
+    e2e: end-to-end tests, require running services
+    unit: unit tests
+'''
 testpaths = [
     "tests",
 ]
