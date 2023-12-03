@@ -2,6 +2,7 @@ from typing import final
 
 import attrs
 
+from app.entities.errors import DuplicateAuthorError
 from app.entities.interfaces import AuthorRepo
 from app.entities.models import ID
 from app.entities.models import Author
@@ -17,6 +18,8 @@ class CreateAuthorUseCase:
     repo: AuthorRepo
 
     def __call__(self, /, *, name: str) -> Author:
+        if self.repo.get_by_name(name):
+            raise DuplicateAuthorError(f"author with {name=!r} already exist")
         author = self.repo.create(name=name)
 
         return author

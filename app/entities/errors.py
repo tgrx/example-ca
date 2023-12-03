@@ -2,8 +2,8 @@ class AppError(Exception):
     pass
 
 
-class AuthorAlreadyExistError(AppError):
+class DuplicateAuthorError(AppError):
     pass
 
 
-__all__ = ("AuthorAlreadyExistError",)
+__all__ = ("DuplicateAuthorError",)

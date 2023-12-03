@@ -1,7 +1,7 @@
 import pytest
 from faker import Faker
 
-from app.entities.errors import AuthorAlreadyExistError
+from app.entities.errors import DuplicateAuthorError
 from app.entities.interfaces import AuthorRepo
 from app.entities.models import Author
 from app.usecases.author import CreateAuthorUseCase
@@ -30,5 +30,5 @@ def test_duplicate_author(
     existing_author: Author,
     create_author: CreateAuthorUseCase,
 ) -> None:
-    with pytest.raises(AuthorAlreadyExistError):
+    with pytest.raises(DuplicateAuthorError):
         create_author(name=existing_author.name)
