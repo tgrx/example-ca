@@ -39,7 +39,8 @@ def test_update_same_name(
     authors_begin = author_repo.get_all()
 
     author = update_author(
-        installed_author.author_id, name=installed_author.name
+        installed_author.author_id,
+        name=installed_author.name,
     )
     assert author == installed_author
 
