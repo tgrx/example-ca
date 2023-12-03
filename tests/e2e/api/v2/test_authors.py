@@ -3,6 +3,7 @@ from faker import Faker
 from app.entities.models import ID
 from app.entities.models import Author
 from clientlib.client import AppClient
+from clientlib.errors import AppClientError
 
 
 def test_author_crud(
@@ -20,7 +21,7 @@ def test_author_crud(
     author = author_exists(client, name1)
     no_author(client, name2)
 
-    duplicate_forbidden(client, name1)
+    duplicate_author_forbidden(client, name1)
 
     author_updated(client, author.author_id, name2)
     author_exists(client, name2)
@@ -57,10 +58,20 @@ def author_updated(
     return author
 
 
-def duplicate_forbidden(client: AppClient, name: str) -> None:
-    author = client.create_author(name=name)
-    assert author.author_id
-    assert author.name == name
+def duplicate_author_forbidden(client: AppClient, name: str) -> None:
+    try:
+        client.create_author(name=name)
+    except AppClientError as err:
+        assert err.response_code == 409
+
+        assert isinstance(err.response_body, dict)
+
+        errors = err.response_body.get("errors")
+        assert isinstance(errors, list)
+        assert len(errors) == 1
+
+        error = errors[0]
+        assert error == f"author with {name=!r} already exist"
 
 
 def no_author(client: AppClient, name: str, /) -> None:

@@ -5,7 +5,7 @@ import orjson
 
 
 @final
-class AppClientError(RuntimeError):
+class AppClientError(Exception):
     def __init__(
         self,
         *args: Any,
@@ -14,7 +14,7 @@ class AppClientError(RuntimeError):
         request_method: str | None = None,
         request_params: dict[str, Any] | None = None,
         request_path: str | None = None,
-        response_body: str | None = None,
+        response_body: Any = None,
         response_code: int | None = None,
         response_headers: dict[str, Any] | None = None,
     ) -> None:

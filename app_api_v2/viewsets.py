@@ -6,6 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from app.entities.errors import DuplicateAuthorError
 from app.entities.models import to_uuid
 from app.repos.django.author import AuthorRepo
 from app.usecases.author import CreateAuthorUseCase
@@ -24,9 +25,12 @@ class AuthorViewSet(ViewSet):
     update_author: Final = UpdateAuthorUseCase(repo=repo)
 
     def create(self, request: Request) -> Response:
-        author = self.create_author(name=request.data["name"])
-        data = author.model_dump()
-        response = Response({"data": data}, status=201)
+        try:
+            author = self.create_author(name=request.data["name"])
+            data = author.model_dump()
+            response = Response({"data": data}, status=201)
+        except DuplicateAuthorError as err:
+            response = Response({"errors": [str(err)]}, status=409)
 
         return response
 
