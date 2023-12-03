@@ -1,5 +1,6 @@
 from contextlib import suppress
 from typing import Any
+from typing import Callable
 from typing import Collection
 from typing import Type
 from typing import TypeVar
@@ -13,6 +14,7 @@ from httpx import Client
 from httpx import Response
 from pydantic import BaseModel
 
+from app.entities.config import Config
 from app.entities.models import ID
 from app.entities.models import Author
 from app.entities.models import Book
@@ -36,15 +38,21 @@ from clientlib.errors import AppClientError
 T = TypeVar("T")
 
 
-retry = tenacity.retry(
-    stop=tenacity.stop_after_attempt(4),
-    wait=tenacity.wait_exponential_jitter(
-        exp_base=2,
-        initial=1,
-        jitter=1,
-        max=10,
-    ),
-)
+def retry(config: Config) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        if config.MODE_DEBUG:
+            return func
+        return tenacity.retry(
+            stop=tenacity.stop_after_attempt(4),
+            wait=tenacity.wait_exponential_jitter(
+                exp_base=2,
+                initial=1,
+                jitter=1,
+                max=10,
+            ),
+        )
+
+    return decorator
 
 
 @final
@@ -54,6 +62,7 @@ class AppClient:
     The very first client of the whole app
     """
 
+    config: Config
     session: Client
 
     def create_author(self, /, *, name: str) -> Author:
@@ -221,12 +230,13 @@ class AppClient:
 
             return body
 
-        @retry
+        @retry(self.config)
         def _request() -> Response:
             return self.session.request(
                 content=content,
                 method=method,
                 params=params,
+                timeout=4 + (10000 * self.config.MODE_DEBUG),
                 url=path,
             )
 
