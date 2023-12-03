@@ -1,10 +1,14 @@
+import pytest
 from faker import Faker
 
+from app.entities.errors import AuthorAlreadyExistError
 from app.entities.interfaces import AuthorRepo
+from app.entities.models import Author
 from app.usecases.author import CreateAuthorUseCase
 
 
-def test_usecase(
+@pytest.mark.unit
+def test_happy(
     *,
     author_repo: AuthorRepo,
     create_author: CreateAuthorUseCase,
@@ -18,3 +22,13 @@ def test_usecase(
 
     authors = author_repo.get_all()
     assert author in authors
+
+
+@pytest.mark.unit
+def test_duplicate_author(
+    *,
+    existing_author: Author,
+    create_author: CreateAuthorUseCase,
+) -> None:
+    with pytest.raises(AuthorAlreadyExistError):
+        create_author(name=existing_author.name)
