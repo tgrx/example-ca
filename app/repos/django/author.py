@@ -1,3 +1,4 @@
+from typing import Collection
 from typing import final
 from uuid import uuid4
 
@@ -11,7 +12,8 @@ from app_api_v1.models import Author as OrmAuthor
 @final
 @attrs.frozen(kw_only=True, slots=True)
 class AuthorRepo:
-    def create(self, /, *, name: str) -> Author:
+    def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
+        assert book_ids
         author_id = uuid4()
         record = OrmAuthor(name=name, pk=author_id)
         record.save()
@@ -53,9 +55,17 @@ class AuthorRepo:
 
         return author
 
-    def update(self, author_id: ID, /, *, name: str) -> Author:
+    def update(
+        self,
+        author_id: ID,
+        /,
+        *,
+        book_ids: Collection[ID] | None = None,
+        name: str | None = None,
+    ) -> Author:
         record = OrmAuthor.objects.get(pk=author_id)
-        record.name = name
+        if name is not None:
+            record.name = name
         record.save()
 
         author = Author.model_validate(record)

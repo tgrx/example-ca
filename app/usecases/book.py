@@ -17,8 +17,8 @@ class CreateBookUseCase:
 
     repo: BookRepo
 
-    def __call__(self, /, *, author_ids: Collection[ID], title: str) -> Book:
-        book = self.repo.create(author_ids=author_ids, title=title)
+    def __call__(self, /, *, title: str) -> Book:
+        book = self.repo.create(title=title)
 
         return book
 

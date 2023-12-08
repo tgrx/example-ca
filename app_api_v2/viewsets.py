@@ -27,7 +27,10 @@ class AuthorViewSet(ViewSet):
 
     def create(self, request: Request) -> Response:
         try:
-            author = self.create_author(name=request.data["name"])
+            author = self.create_author(
+                book_ids=request.data["books"],
+                name=request.data["name"],
+            )
             data = author.model_dump()
             response = Response({"data": data}, status=201)
         except DuplicateAuthorNameError as exc:

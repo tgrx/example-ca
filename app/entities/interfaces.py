@@ -20,7 +20,9 @@ class AuthorRepo(Protocol):
     This is how any Author repo MUST act.
     """
 
-    def create(self: Self, /, *, name: str) -> Author:
+    def create(
+        self: Self, /, *, book_ids: Collection[ID], name: str
+    ) -> Author:
         """
         Use this to create a new Author object.
         """
@@ -50,7 +52,14 @@ class AuthorRepo(Protocol):
         """
         ...
 
-    def update(self: Self, author_id: ID, /, *, name: str) -> Author:
+    def update(
+        self: Self,
+        author_id: ID,
+        /,
+        *,
+        book_ids: Collection[ID] | None = None,
+        name: str | None = None,
+    ) -> Author:
         """
         Use this to update Author with new data using its ID.
         """
@@ -66,7 +75,6 @@ class BookRepo(Protocol):
         self: Self,
         /,
         *,
-        author_ids: Collection[ID],
         title: str,
     ) -> Book:
         """

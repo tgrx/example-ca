@@ -24,10 +24,9 @@ class BookViewSet(ViewSet):
     update_book: Final = UpdateBookUseCase(repo=repo)
 
     def create(self, request: Request) -> Response:
-        book = self.create_book(
-            author_ids=request.data["authors"],
-            title=request.data["title"],
-        )
+        book = self.create_book(title=request.data["title"])
+        if author_ids := request.data.get("authors"):
+            book = self.update_book(book.book_id, author_ids=author_ids)
         data = book.model_dump()
         response = Response({"data": data}, status=201)
 

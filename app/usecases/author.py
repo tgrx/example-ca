@@ -1,7 +1,9 @@
+from typing import Collection
 from typing import final
 
 import attrs
 
+from app.entities.errors import DegenerateAuthorsError
 from app.entities.errors import DuplicateAuthorNameError
 from app.entities.errors import LostAuthorError
 from app.entities.interfaces import AuthorRepo
@@ -18,11 +20,21 @@ class CreateAuthorUseCase:
 
     repo: AuthorRepo
 
-    def __call__(self, /, *, name: str) -> Author:
+    def __call__(self, /, *, book_ids: Collection[ID], name: str) -> Author:
         self.ensure_name_is_unique(name)
-        author = self.repo.create(name=name)
+        self.ensure_books_are_nonempty(book_ids, name)
+        author = self.repo.create(book_ids=book_ids, name=name)
 
         return author
+
+    def ensure_books_are_nonempty(
+        self,
+        book_ids: Collection[ID],
+        name: str,
+        /,
+    ) -> None:
+        if not book_ids:
+            raise DegenerateAuthorsError(authors={name: None})
 
     def ensure_name_is_unique(self, name: str) -> None:
         name_is_taken = self.repo.get_by_name(name) is not None
@@ -84,11 +96,18 @@ class UpdateAuthorUseCase:
 
     repo: AuthorRepo
 
-    def __call__(self, author_id: ID, /, *, name: str) -> Author:
+    def __call__(
+        self,
+        author_id: ID,
+        /,
+        *,
+        book_ids: Collection[ID] | None = None,
+        name: str | None = None,
+    ) -> Author:
         self.ensure_author_exists(author_id)
         self.ensure_name_is_unique(author_id, name)
+        self.ensure_books_are_nonempty(author_id, book_ids)
         author = self.repo.update(author_id, name=name)
-
         return author
 
     def ensure_author_exists(self, author_id: ID) -> None:
@@ -96,9 +115,37 @@ class UpdateAuthorUseCase:
         if not author:
             raise LostAuthorError(author_id=author_id)
 
-    def ensure_name_is_unique(self, author_id: ID, name: str) -> None:
+    def ensure_books_are_nonempty(
+        self,
+        author_id: ID,
+        book_ids: Collection[ID] | None,
+        /,
+    ) -> None:
+        if book_ids is None:
+            return
+
+        if book_ids:
+            return
+
         author = self.repo.get_by_id(author_id)
-        assert author
+        if author is None:
+            raise LostAuthorError(author_id=author_id)
+
+        name = author.name
+        raise DegenerateAuthorsError(authors={name: author_id})
+
+    def ensure_name_is_unique(
+        self,
+        author_id: ID,
+        name: str | None,
+        /,
+    ) -> None:
+        if name is None:
+            return
+
+        author = self.repo.get_by_id(author_id)
+        if author is None:
+            raise LostAuthorError(author_id=author_id)
 
         name_is_taken = self.repo.get_by_name(name) is not None
         if name != author.name and name_is_taken:

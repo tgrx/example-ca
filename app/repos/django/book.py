@@ -13,21 +13,13 @@ from app_api_v3.models import Book as OrmBook
 @final
 @attrs.frozen(kw_only=True, slots=True)
 class BookRepo:
-    def create(self, /, *, author_ids: Collection[ID], title: str) -> Book:
+    def create(self, /, *, title: str) -> Book:
         book_id = uuid4()
         orm_book = OrmBook(pk=book_id, title=title)
         orm_book.save()
 
-        author_ids = sorted(set(author_ids))
-        orm_book.authors.add(*author_ids)  # type: ignore
-
-        authors = [
-            Author.model_validate(orm_author)
-            for orm_author in orm_book.authors.order_by("name", "pk").all()
-        ]
-
         book = Book(
-            authors=authors,
+            authors=[],
             book_id=orm_book.pk,
             title=orm_book.title,
         )

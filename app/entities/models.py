@@ -39,6 +39,7 @@ class Model(BaseModel):
 @final
 class Author(Model):
     author_id: ID
+    books: list["Book"]
     name: str
 
 
@@ -47,6 +48,9 @@ class Book(Model):
     authors: list[Author]
     book_id: ID
     title: str
+
+
+assert Author.model_rebuild() is not False
 
 
 __all__ = (
