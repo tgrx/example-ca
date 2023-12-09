@@ -16,7 +16,7 @@ def test_correct_create(
     name = "Plato"
     plato = create_author(book_ids=[laws.book_id], name=name)
     assert plato.author_id
-    assert plato.books == [laws]
+    assert plato.books == (laws,)
     assert plato.name == name
 
 
@@ -29,7 +29,9 @@ def test_deny_degenerate_authors(
     with pytest.raises(DegenerateAuthorsError) as excinfo:
         create_author(book_ids=[], name=name)
 
-    assert excinfo.value.errors == [f"degenerate {name!r}"]
+    assert excinfo.value.errors == [
+        f"The Author({name=!r}) will become degenerate without books."
+    ]
 
 
 @pytest.mark.unit
@@ -41,7 +43,9 @@ def test_require_unique_name(
     with pytest.raises(DuplicateAuthorNameError) as excinfo:
         create_author(book_ids=[laws.book_id], name=plato.name)
 
-    assert excinfo.value.errors == [f"dup author {plato.name!r}"]
+    assert excinfo.value.errors == [
+        f"The Author(name={plato.name!r}) already exists."
+    ]
 
 
 __all__ = (

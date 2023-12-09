@@ -22,11 +22,10 @@ from app.repos.sqlalchemy.tables import table_books_authors
 class BookRepo:
     engine: Engine
 
-    def create(self, /, *, author_ids: Collection[ID], title: str) -> Book:
+    def create(self, /, *, title: str) -> Book:
         conn: Connection
         with self.engine.begin() as conn:
             book_id = self._create_book_without_relations(conn, title=title)
-            self._assign_authors(conn, book_id, author_ids=author_ids)
             book = self._get_by_id(conn, book_id)
 
         assert book is not None
@@ -202,8 +201,11 @@ class BookRepo:
         if not row:
             return None
 
+        authors = tuple(
+            Author.model_validate(obj) for obj in (row.authors or [])
+        )
         book = Book(
-            authors=[Author.model_validate(obj) for obj in row.authors or []],
+            authors=authors,
             book_id=to_uuid(row.book_id),
             title=row.title,
         )

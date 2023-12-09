@@ -5,6 +5,7 @@ from faker import Faker
 
 from app.entities.errors import DegenerateAuthorsError
 from app.entities.errors import DuplicateAuthorNameError
+from app.entities.errors import LostAuthorError
 from app.entities.models import Author
 from app.entities.models import Book
 from app.usecases.author import UpdateAuthorUseCase
@@ -17,12 +18,11 @@ def test_correct_update_books(
     republic: Book,
     update_author: UpdateAuthorUseCase,
 ) -> None:
-    assert plato.books == [laws]
-    books = [laws, republic]
-    book_ids = [b.book_id for b in books]
+    assert plato.books == (laws,)
+    books = (laws, republic)
+    book_ids = {b.book_id for b in books}
     author = update_author(plato.author_id, book_ids=book_ids)
     assert author.author_id == plato.author_id
-    assert author.books != plato.books
     assert author.books == books
     assert author.name == plato.name
 
@@ -48,7 +48,10 @@ def test_deny_degenerate_author(
     with pytest.raises(DegenerateAuthorsError) as excinfo:
         update_author(plato.author_id, book_ids=[])
 
-    assert excinfo.value.errors == []
+    assert excinfo.value.errors == [
+        f"The Author(author_id={plato.author_id}, name={plato.name!r})"
+        " will become degenerate without books."
+    ]
 
 
 @pytest.mark.unit
@@ -59,10 +62,12 @@ def test_deny_lost(
     lost_author_id = uuid4()
     lost_name = faker.name()
 
-    with pytest.raises(DegenerateAuthorsError) as excinfo:
+    with pytest.raises(LostAuthorError) as excinfo:
         update_author(lost_author_id, name=lost_name)
 
-    assert excinfo.value.errors == []
+    assert excinfo.value.errors == [
+        f"The Author(author_id={lost_author_id}) does not exist."
+    ]
 
 
 @pytest.mark.unit
@@ -88,7 +93,9 @@ def test_require_unique_name(
     with pytest.raises(DuplicateAuthorNameError) as excinfo:
         update_author(plato.author_id, name=aristotle.name)
 
-    assert excinfo.value.errors == []
+    assert excinfo.value.errors == [
+        f"The Author(name={aristotle.name!r}) already exists."
+    ]
 
 
 __all__ = (

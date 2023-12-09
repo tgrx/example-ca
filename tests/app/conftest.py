@@ -11,18 +11,20 @@ from app.repos.local.book import BookRepo
 
 class Indices(NamedTuple):
     authors: dict[ID, Author]
+    ba: dict[ID, set[ID]]
     books: dict[ID, Book]
 
 
 @pytest.fixture(scope="function")
 def indices() -> Indices:
-    return Indices(authors={}, books={})
+    return Indices(authors={}, ba={}, books={})
 
 
 @pytest.fixture(scope="function")
 def author_repo(indices: Indices) -> AuthorRepo:
     return AuthorRepo(
         index_authors=indices.authors,
+        index_ba=indices.ba,
         index_books=indices.books,
     )
 
@@ -31,6 +33,7 @@ def author_repo(indices: Indices) -> AuthorRepo:
 def book_repo(indices: Indices) -> BookRepo:
     return BookRepo(
         index_authors=indices.authors,
+        index_ba=indices.ba,
         index_books=indices.books,
     )
 

@@ -17,9 +17,9 @@ def test_correct_update_authors(
     plato: Author,
     update_book: UpdateBookUseCase,
 ) -> None:
-    assert republic.authors == []
-    authors = [plato]
-    author_ids = [a.author_id for a in authors]
+    assert republic.authors == ()
+    authors = (plato,)
+    author_ids = {a.author_id for a in authors}
     book = update_book(republic.book_id, author_ids=author_ids)
     assert book.authors != republic.authors
     assert book.authors == authors
@@ -46,12 +46,13 @@ def test_deny_degenerate_author(
     plato: Author,
     update_book: UpdateBookUseCase,
 ) -> None:
-    assert laws.authors == [plato]
-
     with pytest.raises(DegenerateAuthorsError) as excinfo:
         update_book(laws.book_id, author_ids=[])
 
-    assert excinfo.value.errors == []
+    assert excinfo.value.errors == [
+        f"The Author(author_id={plato.author_id}, name={plato.name!r})"
+        " will become degenerate without books."
+    ]
 
 
 @pytest.mark.unit
@@ -65,7 +66,9 @@ def test_deny_lost(
     with pytest.raises(LostBookError) as excinfo:
         update_book(lost_book_id, title=lost_title)
 
-    assert excinfo.value.errors == []
+    assert excinfo.value.errors == [
+        f"The Book(book_id={lost_book_id}) does not exist."
+    ]
 
 
 @pytest.mark.unit
@@ -86,7 +89,9 @@ def test_require_unique_name(
     with pytest.raises(DuplicateBookTitleError) as excinfo:
         update_book(laws.book_id, title=republic.title)
 
-    assert excinfo.value.errors == []
+    assert excinfo.value.errors == [
+        f"The Book(title={republic.title!r}) already exists."
+    ]
 
 
 __all__ = (

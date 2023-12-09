@@ -25,7 +25,10 @@ def test_deny_degenerate_authors(
     with pytest.raises(DegenerateAuthorsError) as excinfo:
         delete_book(laws.book_id)
 
-    assert excinfo.value.errors == [f"{plato.name}"]
+    assert excinfo.value.errors == [
+        f"The Author(author_id={plato.author_id}, name={plato.name!r})"
+        " will become degenerate without books."
+    ]
 
 
 @pytest.mark.unit

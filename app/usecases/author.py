@@ -107,7 +107,7 @@ class UpdateAuthorUseCase:
         self.ensure_author_exists(author_id)
         self.ensure_name_is_unique(author_id, name)
         self.ensure_books_are_nonempty(author_id, book_ids)
-        author = self.repo.update(author_id, name=name)
+        author = self.repo.update(author_id, book_ids=book_ids, name=name)
         return author
 
     def ensure_author_exists(self, author_id: ID) -> None:

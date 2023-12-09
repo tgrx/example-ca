@@ -39,13 +39,13 @@ class Model(BaseModel):
 @final
 class Author(Model):
     author_id: ID
-    books: list["Book"]
+    books: tuple["Book", ...]
     name: str
 
 
 @final
 class Book(Model):
-    authors: list[Author]
+    authors: tuple[Author, ...]
     book_id: ID
     title: str
 

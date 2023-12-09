@@ -52,7 +52,6 @@ def installed_authors_with_books(
 
     books = [
         repo.create(
-            author_ids=[author.author_id],
             title=f"Bio of {author.name}",
         )
         for author in installed_authors.values()

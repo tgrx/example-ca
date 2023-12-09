@@ -12,7 +12,7 @@ def test_correct_create(
     title = "Bible"
     book = create_book(title=title)
     assert book.book_id
-    assert book.authors == []
+    assert book.authors == ()
     assert book.title == title
 
 
@@ -24,7 +24,9 @@ def test_require_unique_title(
     with pytest.raises(DuplicateBookTitleError) as excinfo:
         create_book(title=bible.title)
 
-    assert excinfo.value.errors == [f"dup book {bible.title!r}"]
+    assert excinfo.value.errors == [
+        f"The Book(title={bible.title!r}) already exists."
+    ]
 
 
 __all__ = (

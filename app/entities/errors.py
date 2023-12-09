@@ -65,12 +65,12 @@ class LostAuthorError(AppError):
 
     @cached_property
     def errors(self) -> list[str]:
-        attrs = ("author_id", "name")
-        attrs_map = {a: getattr(self, a) for a in attrs}
-        args = ", ".join(f"{a}={v!r}" for a, v in sorted(attrs_map.items()))
+        author_id_str = f"author_id={self.author_id}" if self.author_id else ""
+        name_str = f"name={self.name!r}" if self.name else ""
+        args_str = (author_id_str, name_str)
+        args = ", ".join(sorted(filter(bool, args_str)))
         author = f"{Author.__name__}({args})"
         message = f"The {author} does not exist."
-
         return [message]
 
 
@@ -81,12 +81,12 @@ class LostBookError(AppError):
 
     @cached_property
     def errors(self) -> list[str]:
-        attrs = ("book_id", "title")
-        attrs_map = {a: getattr(self, a) for a in attrs}
-        args = ", ".join(f"{a}={v!r}" for a, v in sorted(attrs_map.items()))
+        book_id_str = f"book_id={self.book_id}" if self.book_id else ""
+        title_str = f"title={self.title!r}" if self.title else ""
+        args_str = (book_id_str, title_str)
+        args = ", ".join(sorted(filter(bool, args_str)))
         book = f"{Book.__name__}({args})"
         message = f"The {book} does not exist."
-
         return [message]
 
 

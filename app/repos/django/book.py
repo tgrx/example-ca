@@ -18,8 +18,9 @@ class BookRepo:
         orm_book = OrmBook(pk=book_id, title=title)
         orm_book.save()
 
+        authors: tuple[Author, ...] = ()
         book = Book(
-            authors=[],
+            authors=authors,
             book_id=orm_book.pk,
             title=orm_book.title,
         )
@@ -39,13 +40,13 @@ class BookRepo:
 
         books = [
             Book(
-                authors=[
+                authors=tuple(
                     Author.model_validate(orm_author)
                     for orm_author in orm_book.authors.order_by(
                         "name",
                         "pk",
                     ).all()
-                ],
+                ),
                 book_id=orm_book.pk,
                 title=orm_book.title,
             )
@@ -61,10 +62,10 @@ class BookRepo:
             orm_books = OrmBook.objects.prefetch_related("authors")
             orm_book = orm_books.get(pk=book_id)
 
-            authors = [
+            authors = tuple(
                 Author.model_validate(orm_author)
                 for orm_author in orm_book.authors.order_by("name", "pk").all()
-            ]
+            )
 
             book = Book(
                 authors=authors,
@@ -84,10 +85,10 @@ class BookRepo:
             orm_books = OrmBook.objects.prefetch_related("authors")
             orm_book = orm_books.get(title=title)
 
-            authors = [
+            authors = tuple(
                 Author.model_validate(orm_author)
                 for orm_author in orm_book.authors.order_by("name", "pk").all()
-            ]
+            )
 
             book = Book(
                 authors=authors,
@@ -121,10 +122,10 @@ class BookRepo:
 
         orm_book.save()
 
-        authors = [
+        authors = tuple(
             Author.model_validate(orm_author)
             for orm_author in orm_book.authors.order_by("name", "pk").all()
-        ]
+        )
 
         book = Book(
             authors=authors,
