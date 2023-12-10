@@ -47,7 +47,8 @@ def test_author_crud(
 
 
 def created(client: AppClient, name: str, /) -> Author:
-    author = client.create_author(name=name)
+    # todo: deal with book ids
+    author = client.create_author(book_ids=[], name=name)
     assert author.author_id
     assert author.name == name
     return author
@@ -74,7 +75,8 @@ def updated(
 
 def cannot_create_with_taken_name(client: AppClient, name: str) -> None:
     try:
-        client.create_author(name=name)
+        # todo: deal with book ids
+        client.create_author(book_ids=[], name=name)
     except AppClientError as err:
         assert err.response_code == 409
 

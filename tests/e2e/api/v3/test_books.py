@@ -59,7 +59,8 @@ def book_created(
     /,
 ) -> Book:
     author_ids = [author.author_id for author in authors]
-    book = client.create_book(author_ids=author_ids, title=title)
+    assert author_ids  # todo: deal with it
+    book = client.create_book(title=title)
 
     assert book.book_id
     assert book.title == title

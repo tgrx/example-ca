@@ -65,22 +65,33 @@ class AppClient:
     config: Config
     session: Client
 
-    def create_author(self, /, *, name: str) -> Author:
+    def create_author(
+        self,
+        /,
+        *,
+        book_ids: Collection[ID],
+        name: str,
+    ) -> Author:
+        book_ids = sorted(book_ids)
+        req = CreateAuthorRequest(book_ids=book_ids, name=name)
+
         author = self._api_call(
             method="post",
             path="/api/v2/authors/",
-            request=CreateAuthorRequest(name=name),
+            request=req,
             response_cls=CreateAuthorResponse,
             statuses=(201,),
         )
 
         return author
 
-    def create_book(self, /, *, author_ids: list[ID], title: str) -> Book:
+    def create_book(self, /, *, title: str) -> Book:
+        req = CreateBookRequest(title=title)
+
         book = self._api_call(
             method="post",
             path="/api/v3/books/",
-            request=CreateBookRequest(authors=author_ids, title=title),
+            request=req,
             response_cls=CreateBookResponse,
             statuses=(201,),
         )
@@ -169,11 +180,21 @@ class AppClient:
 
         return book
 
-    def update_author(self, author_id: ID, /, *, name: str) -> Author:
+    def update_author(
+        self,
+        author_id: ID,
+        /,
+        *,
+        book_ids: Collection[ID] | None = None,
+        name: str | None = None,
+    ) -> Author:
+        book_ids = None if book_ids is None else sorted(book_ids)
+        req = UpdateAuthorRequest(book_ids=book_ids, name=name)
+
         author = self._api_call(
             method="patch",
             path=f"/api/v2/authors/{author_id}/",
-            request=UpdateAuthorRequest(name=name),
+            request=req,
             response_cls=UpdateAuthorResponse,
             statuses=(200,),
         )
@@ -185,13 +206,16 @@ class AppClient:
         book_id: ID,
         /,
         *,
-        author_ids: list[ID] | None = None,
+        author_ids: Collection[ID] | None = None,
         title: str | None = None,
     ) -> Book:
+        author_ids = None if author_ids is None else sorted(author_ids)
+        req = UpdateBookRequest(author_ids=author_ids, title=title)
+
         book = self._api_call(
             method="patch",
             path=f"/api/v3/books/{book_id}/",
-            request=UpdateBookRequest(authors=author_ids, title=title),
+            request=req,
             response_cls=UpdateBookResponse,
             statuses=(200,),
         )
