@@ -1,5 +1,6 @@
 import abc
 from functools import cached_property
+from typing import Collection
 from typing import Mapping
 
 import attrs
@@ -59,41 +60,45 @@ class DuplicateBookTitleError(AppError):
 
 
 @attrs.define(kw_only=True)
-class LostAuthorError(AppError):
-    author_id: ID | None = None
-    name: str | None = None
+class LostAuthorsError(AppError):
+    author_ids: Collection[ID]
 
     @cached_property
     def errors(self) -> list[str]:
-        author_id_str = f"author_id={self.author_id}" if self.author_id else ""
-        name_str = f"name={self.name!r}" if self.name else ""
-        args_str = (author_id_str, name_str)
-        args = ", ".join(sorted(filter(bool, args_str)))
-        author = f"{Author.__name__}({args})"
-        message = f"The {author} does not exist."
-        return [message]
+        def _build_message(author_id: ID) -> str:
+            text_author_id = f"{author_id=}"
+            args = [text_author_id]
+            text_args = ", ".join(sorted(filter(bool, args)))
+            text_author = f"{Author.__name__}({text_args})"
+            message = f"The {text_author} does not exist."
+            return message
+
+        messages = sorted(map(_build_message, self.author_ids))
+        return messages
 
 
 @attrs.define(kw_only=True)
-class LostBookError(AppError):
-    book_id: ID | None = None
-    title: str | None = None
+class LostBooksError(AppError):
+    book_ids: Collection[ID]
 
     @cached_property
     def errors(self) -> list[str]:
-        book_id_str = f"book_id={self.book_id}" if self.book_id else ""
-        title_str = f"title={self.title!r}" if self.title else ""
-        args_str = (book_id_str, title_str)
-        args = ", ".join(sorted(filter(bool, args_str)))
-        book = f"{Book.__name__}({args})"
-        message = f"The {book} does not exist."
-        return [message]
+        def _build_message(book_id: ID) -> str:
+            text_book_id = f"{book_id=}"
+            args = [text_book_id]
+            text_args = ", ".join(sorted(filter(bool, args)))
+            text_book = f"{Book.__name__}({text_args})"
+            message = f"The {text_book} does not exist."
+            return message
+
+        messages = sorted(map(_build_message, self.book_ids))
+        return messages
 
 
 __all__ = (
     "DegenerateAuthorsError",
     "DuplicateAuthorNameError",
     "DuplicateBookTitleError",
-    "LostAuthorError",
-    "LostBookError",
+    "LostAuthorsError",
+    "LostBooksError",
 )

@@ -5,7 +5,7 @@ import attrs
 
 from app.entities.errors import DegenerateAuthorsError
 from app.entities.errors import DuplicateAuthorNameError
-from app.entities.errors import LostAuthorError
+from app.entities.errors import LostAuthorsError
 from app.entities.interfaces import AuthorRepo
 from app.entities.models import ID
 from app.entities.models import Author
@@ -116,7 +116,7 @@ class UpdateAuthorUseCase:
     def ensure_author_exists(self, author_id: ID) -> None:
         author = self.repo.get_by_id(author_id)
         if not author:
-            raise LostAuthorError(author_id=author_id)
+            raise LostAuthorsError(author_id=author_id)
 
     def ensure_books_are_nonempty(
         self,
@@ -132,7 +132,7 @@ class UpdateAuthorUseCase:
 
         author = self.repo.get_by_id(author_id)
         if author is None:
-            raise LostAuthorError(author_id=author_id)
+            raise LostAuthorsError(author_id=author_id)
 
         name = author.name
         raise DegenerateAuthorsError(authors={name: author_id})
@@ -148,7 +148,7 @@ class UpdateAuthorUseCase:
 
         author = self.repo.get_by_id(author_id)
         if author is None:
-            raise LostAuthorError(author_id=author_id)
+            raise LostAuthorsError(author_id=author_id)
 
         name_is_taken = self.repo.get_by_name(name) is not None
         if name != author.name and name_is_taken:

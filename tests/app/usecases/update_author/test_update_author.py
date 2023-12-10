@@ -5,7 +5,7 @@ from faker import Faker
 
 from app.entities.errors import DegenerateAuthorsError
 from app.entities.errors import DuplicateAuthorNameError
-from app.entities.errors import LostAuthorError
+from app.entities.errors import LostAuthorsError
 from app.entities.models import Author
 from app.entities.models import Book
 from app.usecases.author import UpdateAuthorUseCase
@@ -65,7 +65,7 @@ def test_deny_lost(
     lost_author_id = uuid4()
     lost_name = faker.name()
 
-    with pytest.raises(LostAuthorError) as excinfo:
+    with pytest.raises(LostAuthorsError) as excinfo:
         update_author(lost_author_id, name=lost_name)
 
     assert excinfo.value.errors == [

@@ -7,8 +7,8 @@ from uuid import uuid4
 import attrs
 
 from app.entities.errors import DegenerateAuthorsError
-from app.entities.errors import LostAuthorError
-from app.entities.errors import LostBookError
+from app.entities.errors import LostAuthorsError
+from app.entities.errors import LostBooksError
 from app.entities.models import ID
 from app.entities.models import Author
 from app.entities.models import Book
@@ -23,14 +23,17 @@ class AuthorRepo:
 
     def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
         author_id = uuid4()
-        books = self._get_books_by_ids(book_ids)
-        author = Author(author_id=author_id, books=books, name=name)
+        new_book_ids = self._clean_book_ids(book_ids)
+
+        author = Author(author_id=author_id, book_ids=new_book_ids, name=name)
         self._raise_on_degenerate_author(author, indexed=False)
         self.index_authors[author_id] = author
         self._update_references(author)
+
         author = self.get_by_id(author_id)
         if author is None:
-            raise LostAuthorError(author_id=author_id, name=name)
+            raise LostAuthorsError(author_ids=[author_id])
+
         return author
 
     def delete(self, author_id: ID, /) -> None:
@@ -38,16 +41,9 @@ class AuthorRepo:
         self._update_references(author)
 
     def get_all(self, /) -> list[Author]:
-        raw_authors = (
-            self.get_by_id(author_id) for author_id in self.index_authors
-        )
-        existing_authors = (
-            author for author in raw_authors if author is not None
-        )
-        sorted_authors = sorted(
-            existing_authors,
-            key=lambda author: author.name,
-        )
+        raw_authors = map(self.get_by_id, self.index_authors)
+        existing_authors = filter(lambda item: item is not None, raw_authors)
+        sorted_authors = sorted(existing_authors, key=lambda item: item.name)
         return sorted_authors
 
     def get_by_id(self, author_id: ID, /) -> Author | None:
@@ -60,9 +56,11 @@ class AuthorRepo:
             for book_id, refs in self.index_books_authors.items()
             if author_id in refs
         }
-        books = self._get_books_by_ids(book_ids)
-        author = author.model_copy(update={"books": books})
+        book_ids = self._clean_book_ids(book_ids)
+
+        author = author.model_copy(update={"book_ids": book_ids})
         self.index_authors[author_id] = author
+
         return author
 
     def get_by_name(self, name: str, /) -> Author | None:
@@ -88,19 +86,18 @@ class AuthorRepo:
     ) -> Author:
         author = self.get_by_id(author_id)
         if author is None:
-            raise LostAuthorError(author_id=author_id)
+            raise LostAuthorsError(author_ids=[author_id])
 
         if book_ids is None and name is None:
             return author
 
-        books = self._get_books_by_ids(book_ids)
-
-        if author.books == books and author.name == name:
+        cleaned_book_ids = self._clean_book_ids(book_ids or [])
+        if author.book_ids == cleaned_book_ids and author.name == name:
             return author
 
         update = {}
         if book_ids is not None:
-            update["books"] = books
+            update["book_ids"] = cleaned_book_ids
         if name is not None:
             update["name"] = name
 
@@ -110,29 +107,27 @@ class AuthorRepo:
         self._update_references(author)
         author = self.get_by_id(author_id)
         if author is None:
-            raise LostAuthorError(author_id=author_id, name=name)
+            raise LostAuthorsError(author_ids=[author_id])
+
         return author
 
-    def _get_books_by_ids(
-        self,
-        book_ids: Collection[ID] | None,
-        /,
-    ) -> tuple[Book, ...]:
-        book_ids = set(book_ids or ())
+    def _clean_book_ids(self, book_ids: Collection[ID], /) -> list[ID]:
+        book_ids = set(book_ids or [])
         if not book_ids:
-            return ()
+            return []
 
-        try:
-            unique_books = {self.index_books[book_id] for book_id in book_ids}
-            books = sorted(
-                unique_books,
-                key=lambda book: book.title,
-            )
-            books = tuple(books)
-            return books
-        except KeyError as exc:
-            missing_book_id = exc.args[0]
-            raise LostBookError(book_id=missing_book_id) from exc
+        existing_book_ids = set(self.index_books.keys())
+        lost_book_ids = book_ids - existing_book_ids
+        if lost_book_ids:
+            raise LostBooksError(book_ids=lost_book_ids)
+
+        book_ids &= existing_book_ids
+        sorted_book_ids = sorted(
+            book_ids,
+            key=lambda book_id: self.index_books[book_id].title,
+        )
+
+        return sorted_book_ids
 
     def _raise_on_degenerate_author(
         self,
@@ -141,11 +136,10 @@ class AuthorRepo:
         *,
         indexed: bool = True,
     ) -> None:
-        if not author.books:
+        if not author.book_ids:
+            author_id = author.author_id if indexed else None
             raise DegenerateAuthorsError(
-                authors={
-                    author.name: (author.author_id if indexed else None),
-                },
+                authors={author.name: author_id},
             )
 
     def _update_references(self, author: Author | None, /) -> None:
@@ -161,22 +155,19 @@ class AuthorRepo:
         if author is None:
             return
 
-        book_ids = {b.book_id for b in author.books}
-        books = self._get_books_by_ids(book_ids)
-        if not books:
+        book_ids = set(author.book_ids)
+        book_ids = self._clean_book_ids(book_ids)
+        if not book_ids:
             raise DegenerateAuthorsError(
                 authors={author.name: author.author_id}
             )
-
-        book_ids = {b.book_id for b in books}
 
         for refs in self.index_books_authors.values():
             refs.discard(author.author_id)
 
         for book_id in book_ids:
-            self.index_books_authors.setdefault(book_id, set()).add(
-                author.author_id
-            )
+            refs = self.index_books_authors.setdefault(book_id, set())
+            refs.add(author.author_id)
 
 
 __all__ = ("AuthorRepo",)
