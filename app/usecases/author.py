@@ -23,6 +23,7 @@ class CreateAuthorUseCase:
     def __call__(self, /, *, book_ids: Collection[ID], name: str) -> Author:
         self.ensure_name_is_unique(name)
         self.ensure_books_are_nonempty(book_ids, name)
+
         author = self.repo.create(book_ids=book_ids, name=name)
 
         return author
@@ -107,7 +108,9 @@ class UpdateAuthorUseCase:
         self.ensure_author_exists(author_id)
         self.ensure_name_is_unique(author_id, name)
         self.ensure_books_are_nonempty(author_id, book_ids)
+
         author = self.repo.update(author_id, book_ids=book_ids, name=name)
+
         return author
 
     def ensure_author_exists(self, author_id: ID) -> None:

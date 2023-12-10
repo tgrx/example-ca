@@ -18,12 +18,14 @@ def test_correct_update_books(
     republic: Book,
     update_author: UpdateAuthorUseCase,
 ) -> None:
-    assert plato.books == (laws,)
-    books = (laws, republic)
-    book_ids = {b.book_id for b in books}
+    assert plato.book_ids == [laws.book_id]
+
+    books = [laws, republic]
+    book_ids = [b.book_id for b in books]
     author = update_author(plato.author_id, book_ids=book_ids)
+
     assert author.author_id == plato.author_id
-    assert author.books == books
+    assert author.book_ids == book_ids
     assert author.name == plato.name
 
 
@@ -34,8 +36,9 @@ def test_correct_update_name(
 ) -> None:
     name = "Aristocles"
     author = update_author(plato.author_id, name=name)
+
     assert author.author_id == plato.author_id
-    assert author.books == plato.books
+    assert author.book_ids == plato.book_ids
     assert author.name != plato.name
     assert author.name == name
 
@@ -75,12 +78,12 @@ def test_noop_update(
     plato: Author,
     update_author: UpdateAuthorUseCase,
 ) -> None:
-    book_ids = [b.book_id for b in plato.books]
     author = update_author(
         plato.author_id,
-        book_ids=book_ids,
+        book_ids=plato.book_ids,
         name=plato.name,
     )
+
     assert author == plato
 
 

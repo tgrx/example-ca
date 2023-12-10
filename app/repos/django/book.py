@@ -15,12 +15,14 @@ from app_api_v3.models import Book as OrmBook
 class BookRepo:
     def create(self, /, *, title: str) -> Book:
         book_id = uuid4()
+
         orm_book = OrmBook(pk=book_id, title=title)
         orm_book.save()
 
-        authors: tuple[Author, ...] = ()
+        author_ids = [orm_author.pk for orm_author in orm_book.authors.all()]
+
         book = Book(
-            authors=authors,
+            author_ids=author_ids,
             book_id=orm_book.pk,
             title=orm_book.title,
         )

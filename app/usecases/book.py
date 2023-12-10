@@ -21,6 +21,7 @@ class CreateBookUseCase:
 
     def __call__(self, /, *, title: str) -> Book:
         self.ensure_title_is_unique(title)
+
         book = self.repo.create(title=title)
 
         return book
@@ -95,7 +96,9 @@ class UpdateBookUseCase:
     ) -> Book:
         self.ensure_book_exists(book_id)
         self.ensure_title_is_unique(book_id, title)
+
         book = self.repo.update(book_id, author_ids=author_ids, title=title)
+
         return book
 
     def ensure_book_exists(self, book_id: ID, /) -> None:

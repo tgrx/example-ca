@@ -21,7 +21,11 @@ class AuthorRepo(Protocol):
     """
 
     def create(
-        self: Self, /, *, book_ids: Collection[ID], name: str
+        self: Self,
+        /,
+        *,
+        book_ids: Collection[ID],
+        name: str,
     ) -> Author:
         """
         Use this to create a new Author object.

@@ -39,18 +39,15 @@ class Model(BaseModel):
 @final
 class Author(Model):
     author_id: ID
-    books: tuple["Book", ...]
+    book_ids: list[ID]
     name: str
 
 
 @final
 class Book(Model):
-    authors: tuple[Author, ...]
+    author_ids: list[ID]
     book_id: ID
     title: str
-
-
-assert Author.model_rebuild() is not False
 
 
 __all__ = (

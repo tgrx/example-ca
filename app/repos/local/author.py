@@ -18,7 +18,7 @@ from app.entities.models import Book
 @attrs.frozen(kw_only=True, slots=True)
 class AuthorRepo:
     index_authors: MutableMapping[ID, Author]
-    index_ba: dict[ID, set[ID]]
+    index_books_authors: MutableMapping[ID, set[ID]]
     index_books: Mapping[ID, Book]
 
     def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
@@ -57,7 +57,7 @@ class AuthorRepo:
 
         book_ids = {
             book_id
-            for book_id, refs in self.index_ba.items()
+            for book_id, refs in self.index_books_authors.items()
             if author_id in refs
         }
         books = self._get_books_by_ids(book_ids)
@@ -149,11 +149,13 @@ class AuthorRepo:
             )
 
     def _update_references(self, author: Author | None, /) -> None:
-        book_ids_to_discard = self.index_ba.keys() - self.index_books.keys()
+        book_ids_to_discard = (
+            self.index_books_authors.keys() - self.index_books.keys()
+        )
         for book_id in book_ids_to_discard:
-            self.index_ba.pop(book_id, ...)
+            self.index_books_authors.pop(book_id, ...)
 
-        for refs in self.index_ba.values():
+        for refs in self.index_books_authors.values():
             refs &= self.index_authors.keys()
 
         if author is None:
@@ -168,11 +170,13 @@ class AuthorRepo:
 
         book_ids = {b.book_id for b in books}
 
-        for refs in self.index_ba.values():
+        for refs in self.index_books_authors.values():
             refs.discard(author.author_id)
 
         for book_id in book_ids:
-            self.index_ba.setdefault(book_id, set()).add(author.author_id)
+            self.index_books_authors.setdefault(book_id, set()).add(
+                author.author_id
+            )
 
 
 __all__ = ("AuthorRepo",)

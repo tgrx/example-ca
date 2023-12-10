@@ -14,9 +14,12 @@ def test_correct_create(
     laws: Book,
 ) -> None:
     name = "Plato"
-    plato = create_author(book_ids=[laws.book_id], name=name)
+    book_ids = [laws.book_id]
+
+    plato = create_author(book_ids=book_ids, name=name)
+
     assert plato.author_id
-    assert plato.books == (laws,)
+    assert plato.book_ids == book_ids
     assert plato.name == name
 
 

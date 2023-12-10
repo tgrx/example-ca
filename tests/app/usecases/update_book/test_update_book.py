@@ -17,12 +17,13 @@ def test_correct_update_authors(
     plato: Author,
     update_book: UpdateBookUseCase,
 ) -> None:
-    assert republic.authors == ()
-    authors = (plato,)
-    author_ids = {a.author_id for a in authors}
+    assert republic.author_ids == []
+
+    author_ids = [plato.author_id]
     book = update_book(republic.book_id, author_ids=author_ids)
-    assert book.authors != republic.authors
-    assert book.authors == authors
+
+    assert book.author_ids != republic.author_ids
+    assert book.author_ids == author_ids
     assert book.book_id == republic.book_id
     assert book.title == republic.title
 
@@ -33,8 +34,10 @@ def test_correct_update_title(
     update_book: UpdateBookUseCase,
 ) -> None:
     title = "Νόμοι"
+
     book = update_book(laws.book_id, title=title)
-    assert book.authors == laws.authors
+
+    assert book.author_ids == laws.author_ids
     assert book.book_id == laws.book_id
     assert book.title != laws.title
     assert book.title == title

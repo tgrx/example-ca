@@ -13,10 +13,17 @@ from app_api_v1.models import Author as OrmAuthor
 @attrs.frozen(kw_only=True, slots=True)
 class AuthorRepo:
     def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
-        assert book_ids
         author_id = uuid4()
         record = OrmAuthor(name=name, pk=author_id)
         record.save()
+        book_ids = sorted(set(book_ids))
+        record.books.add(*book_ids)
+        books = tuple(
+            Book.model_validate(orm_book)
+            # todo: recursive refs, simplify
+            # maybe only one model has relation
+            # or use case will populate by itself
+        )
         author = Author.model_validate(record)
 
         return author

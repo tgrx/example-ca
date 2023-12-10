@@ -10,9 +10,11 @@ def test_correct_create(
     create_book: CreateBookUseCase,
 ) -> None:
     title = "Bible"
+
     book = create_book(title=title)
+
+    assert book.author_ids == []
     assert book.book_id
-    assert book.authors == ()
     assert book.title == title
 
 
