@@ -9,7 +9,6 @@ from sqlalchemy import Engine
 from sqlalchemy.dialects.postgresql import aggregate_order_by
 
 from app.entities.models import ID
-from app.entities.models import Author
 from app.entities.models import Book
 from app.entities.models import to_uuid
 from app.repos.sqlalchemy.tables import table_authors
@@ -33,6 +32,7 @@ class BookRepo:
         return book
 
     def delete(self, book_id: ID, /) -> None:
+        # todo: check for degeneracy
         stmt_books_authors = table_books_authors.delete().where(
             table_books_authors.c.book_id == book_id,
         )
@@ -96,6 +96,7 @@ class BookRepo:
         author_ids: Collection[ID] | None = None,
         title: str | None = None,
     ) -> Book:
+        # todo: check authors for degeneracy
         conn: Connection
         with self.engine.begin() as conn:
             if title is not None:
@@ -201,11 +202,10 @@ class BookRepo:
         if not row:
             return None
 
-        authors = tuple(
-            Author.model_validate(obj) for obj in (row.authors or [])
-        )
+        # todo: get author ids
+        author_ids: list[ID] = []
         book = Book(
-            authors=authors,
+            author_ids=author_ids,
             book_id=to_uuid(row.book_id),
             title=row.title,
         )

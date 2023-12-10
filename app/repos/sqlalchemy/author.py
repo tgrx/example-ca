@@ -1,3 +1,4 @@
+from typing import Collection
 from typing import final
 from uuid import uuid4
 
@@ -17,7 +18,10 @@ from app.repos.sqlalchemy.tables import table_books_authors
 class AuthorRepo:
     engine: Engine
 
-    def create(self, /, *, name: str) -> Author:
+    def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
+        # todo: use book ids
+        # todo: check book ids for lost
+        assert book_ids
         author_id = uuid4()
 
         values = {
@@ -91,7 +95,16 @@ class AuthorRepo:
 
         return author
 
-    def update(self, author_id: ID, /, *, name: str) -> Author:
+    def update(
+        self,
+        author_id: ID,
+        /,
+        *,
+        book_ids: Collection[ID] | None = None,
+        name: str | None = None,
+    ) -> Author:
+        # todo: use book ids
+        assert book_ids
         values = {table_authors.c.name: name}
         stmt = (
             sa.update(table_authors)

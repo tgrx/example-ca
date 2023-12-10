@@ -73,7 +73,7 @@ class AuthorViewSet(ViewSet):
         author_id = to_uuid(pk)
         authors = self.find_authors(author_id=author_id)
         if not authors:
-            payload["errors"] = LostAuthorsError(author_id=author_id).errors
+            payload["errors"] = LostAuthorsError(author_ids=[author_id]).errors
             status = 404
         else:
             author = authors[0]

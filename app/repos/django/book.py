@@ -5,7 +5,6 @@ from uuid import uuid4
 import attrs
 
 from app.entities.models import ID
-from app.entities.models import Author
 from app.entities.models import Book
 from app_api_v3.models import Book as OrmBook
 
@@ -19,7 +18,7 @@ class BookRepo:
         orm_book = OrmBook(pk=book_id, title=title)
         orm_book.save()
 
-        author_ids = [orm_author.pk for orm_author in orm_book.authors.all()]
+        author_ids = self._get_author_ids(orm_book)
 
         book = Book(
             author_ids=author_ids,
@@ -38,22 +37,17 @@ class BookRepo:
             pass
 
     def get_all(self, /) -> list[Book]:
-        orm_books = OrmBook.objects.prefetch_related("authors").all()
+        books = []
 
-        books = [
-            Book(
-                authors=tuple(
-                    Author.model_validate(orm_author)
-                    for orm_author in orm_book.authors.order_by(
-                        "name",
-                        "pk",
-                    ).all()
-                ),
+        orm_books = OrmBook.objects.prefetch_related("authors").all()
+        for orm_book in orm_books:
+            author_ids = self._get_author_ids(orm_book)
+            book = Book(
+                author_ids=author_ids,
                 book_id=orm_book.pk,
                 title=orm_book.title,
             )
-            for orm_book in orm_books
-        ]
+            books.append(book)
 
         return books
 
@@ -64,13 +58,10 @@ class BookRepo:
             orm_books = OrmBook.objects.prefetch_related("authors")
             orm_book = orm_books.get(pk=book_id)
 
-            authors = tuple(
-                Author.model_validate(orm_author)
-                for orm_author in orm_book.authors.order_by("name", "pk").all()
-            )
+            author_ids = self._get_author_ids(orm_book)
 
             book = Book(
-                authors=authors,
+                author_ids=author_ids,
                 book_id=orm_book.pk,
                 title=orm_book.title,
             )
@@ -87,13 +78,10 @@ class BookRepo:
             orm_books = OrmBook.objects.prefetch_related("authors")
             orm_book = orm_books.get(title=title)
 
-            authors = tuple(
-                Author.model_validate(orm_author)
-                for orm_author in orm_book.authors.order_by("name", "pk").all()
-            )
+            author_ids = self._get_author_ids(orm_book)
 
             book = Book(
-                authors=authors,
+                author_ids=author_ids,
                 book_id=orm_book.pk,
                 title=orm_book.title,
             )
@@ -117,25 +105,28 @@ class BookRepo:
             orm_book.title = title
 
         if author_ids is not None:
+            # todo: check for degenerate
             orm_book.authors.clear()
             if author_ids:
                 author_ids = sorted(set(author_ids))
                 orm_book.authors.add(*author_ids)  # type: ignore
 
+        # todo: transaction
         orm_book.save()
 
-        authors = tuple(
-            Author.model_validate(orm_author)
-            for orm_author in orm_book.authors.order_by("name", "pk").all()
-        )
+        author_ids = self._get_author_ids(orm_book)
 
         book = Book(
-            authors=authors,
+            author_ids=author_ids,
             book_id=orm_book.pk,
             title=orm_book.title,
         )
 
         return book
+
+    def _get_author_ids(self, orm_book: OrmBook, /) -> list[ID]:
+        author_ids = [i.author_id for i in orm_book.authors.all()]
+        return author_ids
 
 
 __all__ = ("BookRepo",)

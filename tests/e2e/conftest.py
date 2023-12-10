@@ -26,13 +26,15 @@ def installed_authors(
 ) -> Iterator[dict[UUID, Author]]:
     repo = AuthorRepo(engine=primary_database_engine)
 
-    authors = [
-        repo.create(name=name)
-        for name in [
-            "Alexander Pushkin",
-            "Victor Pelevin",
-        ]
-    ]
+    # todo: use book for author
+    # authors = [
+    #     repo.create(name=name)
+    #     for name in [
+    #         "Alexander Pushkin",
+    #         "Victor Pelevin",
+    #     ]
+    # ]
+    authors: list[Author] = []
 
     authors_map = {author.author_id: author for author in authors}
 

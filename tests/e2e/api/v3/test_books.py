@@ -63,7 +63,7 @@ def book_created(
 
     assert book.book_id
     assert book.title == title
-    assert book.authors == authors
+    assert book.author_ids == authors
 
     return book
 
@@ -81,7 +81,7 @@ def book_exists(
     assert book_by_id == book
 
     if authors is not None:
-        assert book.authors == authors
+        assert book.author_ids == authors
 
     assert book.title == title
 
@@ -101,7 +101,9 @@ def book_updated(
     if authors is not None:
         author_ids = [author.author_id for author in authors]
     book_updated = client.update_book(
-        book_id, author_ids=author_ids, title=title
+        book_id,
+        author_ids=author_ids,
+        title=title,
     )
 
     assert book_original.book_id == book_updated.book_id
@@ -113,12 +115,12 @@ def book_updated(
         assert book_original.title == book_updated.title
         assert book_updated.title != title
 
-    if authors is not None and authors != book_original.authors:
-        assert book_original.authors != book_updated.authors
-        assert book_updated.authors == authors
+    if authors is not None and authors != book_original.author_ids:
+        assert book_original.author_ids != book_updated.author_ids
+        assert book_updated.author_ids == authors
     else:
-        assert book_original.authors == book_updated.authors
-        assert book_updated.authors != authors
+        assert book_original.author_ids == book_updated.author_ids
+        assert book_updated.author_ids != authors
 
     return book_updated
 
