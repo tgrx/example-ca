@@ -66,7 +66,7 @@ class LostAuthorsError(AppError):
     @cached_property
     def errors(self) -> list[str]:
         def _build_message(author_id: ID) -> str:
-            text_author_id = f"{author_id=}"
+            text_author_id = f"{author_id=!s}"
             args = [text_author_id]
             text_args = ", ".join(sorted(filter(bool, args)))
             text_author = f"{Author.__name__}({text_args})"
@@ -84,7 +84,7 @@ class LostBooksError(AppError):
     @cached_property
     def errors(self) -> list[str]:
         def _build_message(book_id: ID) -> str:
-            text_book_id = f"{book_id=}"
+            text_book_id = f"{book_id=!s}"
             args = [text_book_id]
             text_args = ", ".join(sorted(filter(bool, args)))
             text_book = f"{Book.__name__}({text_args})"

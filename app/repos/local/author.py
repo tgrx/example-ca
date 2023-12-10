@@ -42,8 +42,8 @@ class AuthorRepo:
 
     def get_all(self, /) -> list[Author]:
         raw_authors = map(self.get_by_id, self.index_authors)
-        existing_authors = filter(lambda item: item is not None, raw_authors)
-        sorted_authors = sorted(existing_authors, key=lambda item: item.name)
+        existing_authors = filter(lambda i: i is not None, raw_authors)
+        sorted_authors = sorted(existing_authors, key=lambda i: i.name)
         return sorted_authors
 
     def get_by_id(self, author_id: ID, /) -> Author | None:
@@ -124,7 +124,7 @@ class AuthorRepo:
         book_ids &= existing_book_ids
         sorted_book_ids = sorted(
             book_ids,
-            key=lambda book_id: self.index_books[book_id].title,
+            key=lambda i: self.index_books[i].title,
         )
 
         return sorted_book_ids
@@ -138,9 +138,8 @@ class AuthorRepo:
     ) -> None:
         if not author.book_ids:
             author_id = author.author_id if indexed else None
-            raise DegenerateAuthorsError(
-                authors={author.name: author_id},
-            )
+            authors = {author.name: author_id}
+            raise DegenerateAuthorsError(authors=authors)
 
     def _update_references(self, author: Author | None, /) -> None:
         book_ids_to_discard = (
@@ -158,9 +157,8 @@ class AuthorRepo:
         book_ids = set(author.book_ids)
         book_ids = self._clean_book_ids(book_ids)
         if not book_ids:
-            raise DegenerateAuthorsError(
-                authors={author.name: author.author_id}
-            )
+            authors = {author.name: author.author_id}
+            raise DegenerateAuthorsError(authors=authors)
 
         for refs in self.index_books_authors.values():
             refs.discard(author.author_id)

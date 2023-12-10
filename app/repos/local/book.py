@@ -95,9 +95,9 @@ class BookRepo:
         update = {}
         if author_ids is not None:
             current_author_ids = set(book.author_ids)
-            discarded_author_ids = current_author_ids - new_author_ids
+            discarded_author_ids = current_author_ids - set(new_author_ids)
             self._raise_on_degenerate_authors(discarded_author_ids)
-            update["authors"] = authors
+            update["author_ids"] = new_author_ids
         if title is not None:
             update["title"] = title
 
@@ -107,30 +107,30 @@ class BookRepo:
         book = self.get_by_id(book_id)
         if book is None:
             raise LostBooksError(book_id=book_id, title=title)
+
         return book
 
     def _clean_author_ids(
         self,
         author_ids: Collection[ID],
         /,
-    ) -> tuple[Author, ...]:
-        author_ids = set(author_ids or ())
+    ) -> list[ID]:
+        author_ids = set(author_ids or [])
         if not author_ids:
-            return ()
+            return []
 
-        try:
-            unique_authors = {
-                self.index_authors[author_id] for author_id in author_ids
-            }
-            authors = sorted(
-                unique_authors,
-                key=lambda author: author.name,
-            )
-            authors = tuple(authors)
-            return authors
-        except KeyError as exc:
-            missing_author_id = exc.args[0]
-            raise LostAuthorsError(author_id=missing_author_id) from exc
+        existing_author_ids = set(self.index_authors.keys())
+        lost_author_ids = author_ids - existing_author_ids
+        if lost_author_ids:
+            raise LostAuthorsError(author_ids=lost_author_ids)
+
+        author_ids &= existing_author_ids
+        sorted_author_ids = sorted(
+            author_ids,
+            key=lambda i: self.index_authors[i].name,
+        )
+
+        return sorted_author_ids
 
     def _raise_on_degenerate_authors(
         self,
@@ -139,9 +139,10 @@ class BookRepo:
     ) -> None:
         degenerate = {}
         for author_id in author_ids:
-            number_of_refs = sum(
+            refs = (
                 author_id in refs for refs in self.index_books_authors.values()
             )
+            number_of_refs = sum(refs)
             if number_of_refs > 1:
                 continue
             author = self.index_authors[author_id]
@@ -151,7 +152,7 @@ class BookRepo:
             raise DegenerateAuthorsError(authors=degenerate)
 
     def _update_references(self, book: Book, /) -> None:
-        author_ids = {author.author_id for author in book.authors}
+        author_ids = self._clean_author_ids(book.author_ids)
         self.index_books_authors[book.book_id] = author_ids
 
 
