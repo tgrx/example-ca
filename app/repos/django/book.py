@@ -3,9 +3,13 @@ from typing import final
 from uuid import uuid4
 
 import attrs
+from django.db import transaction
 
+from app.entities.errors import DegenerateAuthorsError
+from app.entities.errors import LostAuthorsError
 from app.entities.models import ID
 from app.entities.models import Book
+from app_api_v1.models import Author as OrmAuthor
 from app_api_v3.models import Book as OrmBook
 
 
@@ -18,13 +22,7 @@ class BookRepo:
         orm_book = OrmBook(pk=book_id, title=title)
         orm_book.save()
 
-        author_ids = self._get_author_ids(orm_book)
-
-        book = Book(
-            author_ids=author_ids,
-            book_id=orm_book.pk,
-            title=orm_book.title,
-        )
+        book = Book.model_validate(orm_book)
 
         return book
 
@@ -37,17 +35,8 @@ class BookRepo:
             pass
 
     def get_all(self, /) -> list[Book]:
-        books = []
-
         orm_books = OrmBook.objects.prefetch_related("authors").all()
-        for orm_book in orm_books:
-            author_ids = self._get_author_ids(orm_book)
-            book = Book(
-                author_ids=author_ids,
-                book_id=orm_book.pk,
-                title=orm_book.title,
-            )
-            books.append(book)
+        books = [Book.model_validate(i) for i in orm_books]
 
         return books
 
@@ -57,15 +46,7 @@ class BookRepo:
         try:
             orm_books = OrmBook.objects.prefetch_related("authors")
             orm_book = orm_books.get(pk=book_id)
-
-            author_ids = self._get_author_ids(orm_book)
-
-            book = Book(
-                author_ids=author_ids,
-                book_id=orm_book.pk,
-                title=orm_book.title,
-            )
-
+            book = Book.model_validate(orm_book)
         except OrmBook.DoesNotExist:
             book = None
 
@@ -77,14 +58,7 @@ class BookRepo:
         try:
             orm_books = OrmBook.objects.prefetch_related("authors")
             orm_book = orm_books.get(title=title)
-
-            author_ids = self._get_author_ids(orm_book)
-
-            book = Book(
-                author_ids=author_ids,
-                book_id=orm_book.pk,
-                title=orm_book.title,
-            )
+            book = Book.model_validate(orm_book)
 
         except OrmBook.DoesNotExist:
             book = None
@@ -101,32 +75,68 @@ class BookRepo:
     ) -> Book:
         orm_book = OrmBook.objects.get(pk=book_id)
 
-        if title is not None:
-            orm_book.title = title
-
         if author_ids is not None:
-            # todo: check for degenerate
-            orm_book.authors.clear()
-            if author_ids:
-                author_ids = sorted(set(author_ids))
-                orm_book.authors.add(*author_ids)  # type: ignore
+            new_author_ids = self._clean_author_ids(author_ids)
+            self._raise_on_degenerate_authors(new_author_ids, orm_book)
 
-        # todo: transaction
-        orm_book.save()
+        with transaction.atomic():
+            if title is not None:
+                orm_book.title = title
+                orm_book.save()
 
-        author_ids = self._get_author_ids(orm_book)
+            if author_ids is not None:
+                orm_book.authors.clear()
+                orm_book.authors.add(*new_author_ids)  # type: ignore
 
-        book = Book(
-            author_ids=author_ids,
-            book_id=orm_book.pk,
-            title=orm_book.title,
-        )
+        book = Book.model_validate(orm_book)
 
         return book
 
-    def _get_author_ids(self, orm_book: OrmBook, /) -> list[ID]:
-        author_ids = [i.author_id for i in orm_book.authors.all()]
-        return author_ids
+    def _clean_author_ids(
+        self,
+        author_ids: Collection[ID],
+        /,
+    ) -> Collection[ID]:
+        raw_author_ids = sorted(set(author_ids))
+        authors = (
+            OrmAuthor.objects.filter(pk__in=raw_author_ids)
+            .order_by("name")
+            .all()
+        )
+        clean_author_ids = [i.author_id for i in authors]
+
+        lost_author_ids = [
+            i for i in raw_author_ids if i not in clean_author_ids
+        ]
+        if lost_author_ids:
+            raise LostAuthorsError(author_ids=lost_author_ids)
+
+        return clean_author_ids
+
+    def _raise_on_degenerate_authors(
+        self,
+        new_author_ids: Collection[ID],
+        orm_book: OrmBook,
+        /,
+    ) -> None:
+        discard_author_ids = [
+            i for i in orm_book.author_ids if i not in new_author_ids
+        ]
+        if not discard_author_ids:
+            return
+
+        discard_authors = (
+            OrmAuthor.objects.filter(pk__in=discard_author_ids)
+            .prefetch_related("books")
+            .all()
+        )
+
+        degenerate_authors = [
+            i for i in discard_authors if i.book_ids == [orm_book.book_id]
+        ]
+        if degenerate_authors:
+            degenerate_map = {i.name: i.pk for i in degenerate_authors}
+            raise DegenerateAuthorsError(authors=degenerate_map)
 
 
 __all__ = ("BookRepo",)
