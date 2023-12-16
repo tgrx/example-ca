@@ -19,19 +19,17 @@ class AuthorRepo:
     engine: Engine
 
     def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
-        # todo: use book ids
-        # todo: check book ids for lost
-        assert book_ids
+        clean_book_ids = self._clean_book_ids(book_ids)
+        self._raise_on_degenerate_author(clean_book_ids, name=name)
+        
         author_id = uuid4()
 
-        values = {
+        query_insert_author = (
+            sa.insert(table_authors)
+            .values({
             table_authors.c.author_id: author_id,
             table_authors.c.name: name,
-        }
-
-        stmt = (
-            sa.insert(table_authors)
-            .values(values)
+        })
             .returning(
                 table_authors.c.author_id,
                 table_authors.c.name,
@@ -40,7 +38,7 @@ class AuthorRepo:
 
         conn: Connection
         with self.engine.begin() as conn:
-            cursor = conn.execute(stmt)
+            cursor = conn.execute(query_insert_author)
             row = cursor.fetchone()
 
         author = Author.model_validate(row)

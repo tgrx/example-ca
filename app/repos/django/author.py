@@ -24,7 +24,7 @@ class AuthorRepo:
         orm_author = OrmAuthor(name=name, pk=author_id)
         with transaction.atomic():
             orm_author.save()
-            orm_author.books.add(*book_ids)  # type: ignore
+            orm_author.books.add(*clean_book_ids)  # type: ignore
         author = Author.model_validate(orm_author)
         return author
 
