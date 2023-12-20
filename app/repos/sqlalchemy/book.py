@@ -7,6 +7,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 from sqlalchemy import Engine
 from sqlalchemy.dialects.postgresql import aggregate_order_by
+from app.entities.errors import DegenerateAuthorsError
 
 from app.entities.models import ID
 from app.entities.models import Book
@@ -32,18 +33,55 @@ class BookRepo:
         return book
 
     def delete(self, book_id: ID, /) -> None:
-        # todo: check for degeneracy
-        stmt_books_authors = table_books_authors.delete().where(
-            table_books_authors.c.book_id == book_id,
-        )
-        stmt_books = table_books.delete().where(
-            table_books.c.book_id == book_id,
-        )
-
+        # todo: refactor ----
+        # check for degenerate authors
         conn: Connection
         with self.engine.begin() as conn:
-            # todo: what if db is down?
+            stmt = sa.select(table_authors.c.author_id).select_from(
+                table_books,
+                table_books_authors,
+                table_authors,
+            ).where(
+                sa.and_(
+                    table_books.c.book_id == table_books_authors.c.book_id,
+                    table_authors.c.author_id == table_books_authors.c.author_id,
+                    table_books.c.book_id == book_id,
+                )
+            )
+            rows = conn.execute(stmt).fetchall()
+            author_ids = [row.author_id for row in rows]
+            if author_ids:
+                stmt = sa.select(
+                    table_authors.c.author_id,
+                    table_authors.c.name,
+                    sa.func.count(table_books_authors.c.book_id).label("nr_books"),
+                ).select_from(
+                    table_authors,
+                ).outerjoin(
+                    table_books_authors,
+                    sa.and_(
+                        table_books_authors.c.author_id == table_authors.c.author_id,
+                        table_books_authors.c.book_id != book_id,
+                    )
+                ).group_by(table_authors.c.author_id)
+                rows = conn.execute(stmt).fetchall()
+                degenerates = {
+                    row.name: row.author_id
+                    for row in rows
+                    if not row.nr_books
+                }
+                if degenerates:
+                    raise DegenerateAuthorsError(authors=degenerates)
+        # ----
+        conn: Connection
+        with self.engine.begin() as conn:
+            stmt_books_authors = table_books_authors.delete().where(
+                table_books_authors.c.book_id == book_id,
+            )
             conn.execute(stmt_books_authors)
+            stmt_books = table_books.delete().where(
+                table_books.c.book_id == book_id,
+            )
             conn.execute(stmt_books)
 
     def get_all(self, /) -> list[Book]:
@@ -51,17 +89,9 @@ class BookRepo:
 
         conn: Connection
         with self.engine.begin() as conn:
-            # todo: what if db is down?
             cursor = conn.execute(stmt)
-            books = [
-                book
-                for book in (
-                    self.__row_to_book(row)
-                    for row in cursor
-                    if row is not None
-                )
-                if book is not None
-            ]
+            rows = cursor.fetchall()
+            books = [Book.model_validate(row) for row in rows]
 
         return books
 
@@ -81,10 +111,11 @@ class BookRepo:
 
         conn: Connection
         with self.engine.begin() as conn:
-            # todo: what if db is down?
             cursor = conn.execute(stmt)
             row = cursor.fetchone()
-            book = self.__row_to_book(row)
+            if not row:
+                return None
+            book = Book.model_validate(row)
 
         return book
 
@@ -96,7 +127,6 @@ class BookRepo:
         author_ids: Collection[ID] | None = None,
         title: str | None = None,
     ) -> Book:
-        # todo: check authors for degeneracy
         conn: Connection
         with self.engine.begin() as conn:
             if title is not None:
