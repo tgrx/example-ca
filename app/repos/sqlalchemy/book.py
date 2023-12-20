@@ -7,11 +7,13 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 from sqlalchemy import Engine
 from sqlalchemy.dialects.postgresql import aggregate_order_by
-from app.entities.errors import DegenerateAuthorsError
 
+from app.entities.errors import DegenerateAuthorsError
+from app.entities.errors import DuplicateBookTitleError
+from app.entities.errors import LostAuthorsError
+from app.entities.errors import LostBooksError
 from app.entities.models import ID
 from app.entities.models import Book
-from app.entities.models import to_uuid
 from app.repos.sqlalchemy.tables import table_authors
 from app.repos.sqlalchemy.tables import table_books
 from app.repos.sqlalchemy.tables import table_books_authors
@@ -23,57 +25,79 @@ class BookRepo:
     engine: Engine
 
     def create(self, /, *, title: str) -> Book:
+        existing = self.get_by_title(title)
+        if existing is not None:
+            raise DuplicateBookTitleError(title=title)
+
+        book_id = uuid4()
+
         conn: Connection
         with self.engine.begin() as conn:
-            book_id = self._create_book_without_relations(conn, title=title)
-            book = self._get_by_id(conn, book_id)
+            stmt = sa.insert(table_books).values(
+                {
+                    table_books.c.book_id: book_id,
+                    table_books.c.title: title,
+                }
+            )
+            conn.execute(stmt)
 
-        assert book is not None
+        book = self.get_by_id(book_id)
+        if book is None:
+            raise LostBooksError(book_ids=[book_id])
 
         return book
 
     def delete(self, book_id: ID, /) -> None:
-        # todo: refactor ----
-        # check for degenerate authors
         conn: Connection
         with self.engine.begin() as conn:
-            stmt = sa.select(table_authors.c.author_id).select_from(
-                table_books,
-                table_books_authors,
-                table_authors,
-            ).where(
-                sa.and_(
-                    table_books.c.book_id == table_books_authors.c.book_id,
-                    table_authors.c.author_id == table_books_authors.c.author_id,
-                    table_books.c.book_id == book_id,
+            stmt = (
+                sa.select(table_authors.c.author_id)
+                .select_from(
+                    table_books,
+                    table_books_authors,
+                    table_authors,
+                )
+                .where(
+                    sa.and_(
+                        table_books.c.book_id == table_books_authors.c.book_id,
+                        table_authors.c.author_id
+                        == table_books_authors.c.author_id,
+                        table_books.c.book_id == book_id,
+                    )
                 )
             )
             rows = conn.execute(stmt).fetchall()
             author_ids = [row.author_id for row in rows]
             if author_ids:
-                stmt = sa.select(
-                    table_authors.c.author_id,
-                    table_authors.c.name,
-                    sa.func.count(table_books_authors.c.book_id).label("nr_books"),
-                ).select_from(
-                    table_authors,
-                ).outerjoin(
-                    table_books_authors,
-                    sa.and_(
-                        table_books_authors.c.author_id == table_authors.c.author_id,
-                        table_books_authors.c.book_id != book_id,
+                stmt = (  # noqa: ECE001
+                    sa.select(
+                        table_authors.c.author_id,
+                        table_authors.c.name,
+                        sa.func.count(table_books_authors.c.book_id).label(
+                            "nr_books"
+                        ),
                     )
-                ).group_by(table_authors.c.author_id)
+                    .select_from(
+                        table_authors,
+                    )
+                    .outerjoin(
+                        table_books_authors,
+                        sa.and_(
+                            table_books_authors.c.author_id
+                            == table_authors.c.author_id,
+                            table_books_authors.c.book_id != book_id,
+                        ),
+                    )
+                    .where(table_authors.c.author_id.in_(author_ids))
+                    .group_by(table_authors.c.author_id)
+                )
                 rows = conn.execute(stmt).fetchall()
                 degenerates = {
-                    row.name: row.author_id
-                    for row in rows
-                    if not row.nr_books
+                    row.name: row.author_id for row in rows if not row.nr_books
                 }
                 if degenerates:
                     raise DegenerateAuthorsError(authors=degenerates)
-        # ----
-        conn: Connection
+
         with self.engine.begin() as conn:
             stmt_books_authors = table_books_authors.delete().where(
                 table_books_authors.c.book_id == book_id,
@@ -127,17 +151,36 @@ class BookRepo:
         author_ids: Collection[ID] | None = None,
         title: str | None = None,
     ) -> Book:
+        existing = self.get_by_id(book_id)
+        if existing is None:
+            raise LostBooksError(book_ids=[book_id])
+
         conn: Connection
         with self.engine.begin() as conn:
-            if title is not None:
-                self._update_book(conn, book_id, title=title)
+            if title is not None and title != existing.title:
+                existing_with_title = self.get_by_title(title)
+                if existing_with_title is not None:
+                    raise DuplicateBookTitleError(title=title)
+
+                stmt = (
+                    sa.update(table_books)
+                    .values(
+                        {
+                            table_books.c.title: title,
+                        }
+                    )
+                    .where(
+                        table_books.c.book_id == book_id,
+                    )
+                )
+                conn.execute(stmt)
 
             if author_ids is not None:
                 self._assign_authors(conn, book_id, author_ids=author_ids)
 
-            book = self._get_by_id(conn, book_id)
-
-        assert book is not None
+        book = self.get_by_id(book_id)
+        if book is None:
+            raise LostBooksError(book_ids=[book_id])
 
         return book
 
@@ -149,10 +192,44 @@ class BookRepo:
         *,
         author_ids: Collection[ID],
     ) -> None:
-        statements: list[sa.Insert | sa.Delete] = [
+        existing = self.get_by_id(book_id)
+        if existing is None:
+            raise LostBooksError(book_ids=[book_id])
+
+        clean_author_ids = set(self._clean_author_ids(conn, author_ids))
+        discarded_author_ids = set(existing.author_ids) - clean_author_ids
+
+        stmt = (  # noqa: ECE001
+            sa.select(
+                table_authors.c.author_id,
+                table_authors.c.name,
+                sa.func.count(table_books_authors.c.book_id).label("nr_books"),
+            )
+            .select_from(
+                table_authors,
+            )
+            .outerjoin(
+                table_books_authors,
+                sa.and_(
+                    table_books_authors.c.author_id
+                    == table_authors.c.author_id,
+                    table_books_authors.c.book_id != book_id,
+                ),
+            )
+            .where(table_authors.c.author_id.in_(discarded_author_ids))
+            .group_by(table_authors.c.author_id)
+        )
+        rows = conn.execute(stmt).fetchall()
+        degenerates = {
+            row.name: row.author_id for row in rows if not row.nr_books
+        }
+        if degenerates:
+            raise DegenerateAuthorsError(authors=degenerates)
+
+        statements: list = [
             sa.delete(table_books_authors).where(
                 table_books_authors.c.book_id == book_id,
-            )
+            ),
         ]
 
         if author_ids:
@@ -171,30 +248,25 @@ class BookRepo:
         for stmt in statements:
             conn.execute(stmt)
 
-    def _create_book_without_relations(
+    def _clean_author_ids(
         self,
         conn: Connection,
+        author_ids: Collection[ID],
         /,
-        *,
-        title: str,
-    ) -> ID:
-        book_id = uuid4()
-        values = {table_books.c.book_id: book_id, table_books.c.title: title}
-        stmt = (
-            sa.insert(table_books)
-            .values(values)
-            .returning(
-                table_books.c.book_id,
-            )
+    ) -> list[ID]:
+        if not author_ids:
+            return []
+
+        stmt = sa.select(table_authors.c.author_id).where(
+            table_authors.c.author_id.in_(author_ids)
         )
+        rows = conn.execute(stmt).fetchall()
+        actual_author_ids = [row.author_id for row in rows]
+        lost_author_ids = set(author_ids) - set(actual_author_ids)
+        if lost_author_ids:
+            raise LostAuthorsError(author_ids=lost_author_ids)
 
-        cursor = conn.execute(stmt)
-        row = cursor.fetchone()
-
-        assert row is not None, "no results returned after creating a book"
-        book_id = to_uuid(row.book_id)
-
-        return book_id
+        return actual_author_ids
 
     def _get_by_id(self, conn: Connection, book_id: ID, /) -> Book | None:
         stmt = (
@@ -209,36 +281,12 @@ class BookRepo:
 
         return book
 
-    def _update_book(
-        self,
-        conn: Connection,
-        book_id: ID,
-        /,
-        *,
-        title: str,
-    ) -> None:
-        values = {table_books.c.title: title}
-
-        stmt = (
-            sa.update(table_books)
-            .values(values)
-            .where(table_books.c.book_id == book_id)
-        )
-
-        conn.execute(stmt)
-
     @staticmethod
     def __row_to_book(row: sa.Row | None, /) -> Book | None:
         if not row:
             return None
 
-        # todo: get author ids
-        author_ids: list[ID] = []
-        book = Book(
-            author_ids=author_ids,
-            book_id=to_uuid(row.book_id),
-            title=row.title,
-        )
+        book = Book.model_validate(row)
 
         return book
 
@@ -248,22 +296,16 @@ class BookRepo:
             sa.select(
                 table_books.c.book_id,
                 table_books.c.title,
-                sa.func.json_agg(
+                sa.func.array_agg(
                     aggregate_order_by(  # type: ignore
-                        sa.func.json_build_object(
-                            "author_id",
-                            sa.cast(table_authors.c.author_id, sa.UUID),
-                            "name",
-                            table_authors.c.name,
-                        ),
+                        table_authors.c.author_id,
                         table_authors.c.name.asc(),
-                        table_authors.c.author_id.asc(),
                     ),
                 )
                 .filter(
                     ~table_authors.c.author_id.is_(None),
                 )
-                .label("authors"),
+                .label("author_ids"),
             )
             .select_from(
                 table_books,
@@ -277,8 +319,8 @@ class BookRepo:
                 table_authors.c.author_id == table_books_authors.c.author_id,
             )
             .order_by(
-                table_books.c.title,
-                table_books.c.book_id,
+                table_books.c.title.asc(),
+                table_books.c.book_id.asc(),
             )
             .group_by(
                 table_books.c.book_id,
