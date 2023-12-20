@@ -24,40 +24,41 @@ class AuthorRepo:
         
         author_id = uuid4()
 
-        query_insert_author = (
-            sa.insert(table_authors)
-            .values({
-            table_authors.c.author_id: author_id,
-            table_authors.c.name: name,
-        })
-            .returning(
-                table_authors.c.author_id,
-                table_authors.c.name,
-            )
-        )
+        # query_insert_author = (
+        #     sa.insert(table_authors)
+        #     .values({
+        #     table_authors.c.author_id: author_id,
+        #     table_authors.c.name: name,
+        # })
+        #     .returning(
+        #         table_authors.c.author_id,
+        #         table_authors.c.name,
+        #     )
+        # )
 
         conn: Connection
         with self.engine.begin() as conn:
-            cursor = conn.execute(query_insert_author)
-            row = cursor.fetchone()
-
-        author = Author.model_validate(row)
+            # cursor = conn.execute(query_insert_author)
+            # row = cursor.fetchone()
+            self._insert(conn, author_id=author_id, name=name)
+            author = self._get_author(conn, author_id)
 
         return author
 
     def delete(self, author_id: ID, /) -> None:
-        stmt_books_authors = table_books_authors.delete().where(
-            table_books_authors.c.author_id == author_id,
-        )
+        # stmt_books_authors = table_books_authors.delete().where(
+        #     table_books_authors.c.author_id == author_id,
+        # )
 
-        stmt_authors = table_authors.delete().where(
-            table_authors.c.author_id == author_id,
-        )
+        # stmt_authors = table_authors.delete().where(
+        #     table_authors.c.author_id == author_id,
+        # )
 
         conn: Connection
         with self.engine.begin() as conn:
-            conn.execute(stmt_books_authors)
-            conn.execute(stmt_authors)
+            self._delete_books_authors(conn, author_id)
+            self._delete(conn, author_id)
+            # conn.execute(stmt_authors)
 
     def get_all(self, /) -> list[Author]:
         stmt = self.__stmt_all_authors()
