@@ -16,3 +16,14 @@ def laws(primary_database_engine: Engine) -> Iterable[Book]:
     yield book
 
     repo.delete(book.book_id)
+
+
+@pytest.fixture(scope="function")
+def republic(primary_database_engine: Engine) -> Iterable[Book]:
+    repo = BookRepo(engine=primary_database_engine)
+
+    book = repo.create(title="Republic")
+
+    yield book
+
+    repo.delete(book.book_id)

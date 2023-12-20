@@ -69,7 +69,7 @@ def cannot_create_degenerate(client: AppClient, name: str, /) -> None:
         assert len(errors) == 1
 
         error = errors[0]
-        assert error == f"author name {name!r} is already taken"
+        assert error == f"The Author({name=!r}) will become degenerate without books."
 
 
 def cannot_create_with_taken_name(client: AppClient, name: str, /) -> None:

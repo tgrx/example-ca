@@ -296,16 +296,17 @@ class BookRepo:
             sa.select(
                 table_books.c.book_id,
                 table_books.c.title,
-                sa.func.array_agg(
-                    aggregate_order_by(  # type: ignore
-                        table_authors.c.author_id,
-                        table_authors.c.name.asc(),
+                sa.func.coalesce(
+                    sa.func.array_agg(
+                        aggregate_order_by(  # type: ignore
+                            table_authors.c.author_id,
+                            table_authors.c.name.asc(),
+                        ),
+                    ).filter(
+                        ~table_authors.c.author_id.is_(None),
                     ),
-                )
-                .filter(
-                    ~table_authors.c.author_id.is_(None),
-                )
-                .label("author_ids"),
+                    [],
+                ).label("author_ids"),
             )
             .select_from(
                 table_books,

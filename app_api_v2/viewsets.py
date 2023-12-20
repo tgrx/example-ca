@@ -6,7 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from app.entities.errors import DuplicateAuthorNameError
+from app.entities.errors import DegenerateAuthorsError, DuplicateAuthorNameError, LostBooksError
 from app.entities.errors import LostAuthorsError
 from app.entities.models import to_uuid
 from app.repos.django.author import AuthorRepo
@@ -28,13 +28,15 @@ class AuthorViewSet(ViewSet):
     def create(self, request: Request) -> Response:
         try:
             author = self.create_author(
-                book_ids=request.data["books"],
+                book_ids=request.data["book_ids"],
                 name=request.data["name"],
             )
             data = author.model_dump()
             response = Response({"data": data}, status=201)
-        except DuplicateAuthorNameError as exc:
+        except (DegenerateAuthorsError, DuplicateAuthorNameError) as exc:
             response = Response({"errors": exc.errors}, status=409)
+        except (LostAuthorsError, LostBooksError,) as exc:
+            response = Response({"errors": exc.errors}, status=404)
 
         return response
 
@@ -59,10 +61,10 @@ class AuthorViewSet(ViewSet):
             author = self.update_author(author_id, name=request.data["name"])
             data = author.model_dump()
             response = Response({"data": data}, status=200)
-        except LostAuthorsError as exc:
-            response = Response({"errors": exc.errors}, status=404)
-        except DuplicateAuthorNameError as exc:
+        except (DegenerateAuthorsError, DuplicateAuthorNameError) as exc:
             response = Response({"errors": exc.errors}, status=409)
+        except (LostAuthorsError, LostBooksError,) as exc:
+            response = Response({"errors": exc.errors}, status=404)
 
         return response
 
