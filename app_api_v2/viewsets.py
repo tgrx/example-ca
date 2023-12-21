@@ -6,8 +6,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from app.entities.errors import DegenerateAuthorsError, DuplicateAuthorNameError, LostBooksError
+from app.entities.errors import DegenerateAuthorsError
+from app.entities.errors import DuplicateAuthorNameError
 from app.entities.errors import LostAuthorsError
+from app.entities.errors import LostBooksError
 from app.entities.models import to_uuid
 from app.repos.django.author import AuthorRepo
 from app.usecases.author import CreateAuthorUseCase
@@ -35,7 +37,10 @@ class AuthorViewSet(ViewSet):
             response = Response({"data": data}, status=201)
         except (DegenerateAuthorsError, DuplicateAuthorNameError) as exc:
             response = Response({"errors": exc.errors}, status=409)
-        except (LostAuthorsError, LostBooksError,) as exc:
+        except (
+            LostAuthorsError,
+            LostBooksError,
+        ) as exc:
             response = Response({"errors": exc.errors}, status=404)
 
         return response
@@ -63,7 +68,10 @@ class AuthorViewSet(ViewSet):
             response = Response({"data": data}, status=200)
         except (DegenerateAuthorsError, DuplicateAuthorNameError) as exc:
             response = Response({"errors": exc.errors}, status=409)
-        except (LostAuthorsError, LostBooksError,) as exc:
+        except (
+            LostAuthorsError,
+            LostBooksError,
+        ) as exc:
             response = Response({"errors": exc.errors}, status=404)
 
         return response

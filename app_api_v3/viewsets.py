@@ -5,8 +5,11 @@ from typing import final
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
-from app.entities.errors import DegenerateAuthorsError, DuplicateAuthorNameError, DuplicateBookTitleError, LostAuthorsError, LostBooksError
 
+from app.entities.errors import DegenerateAuthorsError
+from app.entities.errors import DuplicateBookTitleError
+from app.entities.errors import LostAuthorsError
+from app.entities.errors import LostBooksError
 from app.entities.models import to_uuid
 from app.repos.django.book import BookRepo
 from app.usecases.book import CreateBookUseCase
@@ -33,7 +36,10 @@ class BookViewSet(ViewSet):
             response = Response({"data": data}, status=201)
         except (DegenerateAuthorsError, DuplicateBookTitleError) as exc:
             response = Response({"errors": exc.errors}, status=409)
-        except (LostAuthorsError, LostBooksError,) as exc:
+        except (
+            LostAuthorsError,
+            LostBooksError,
+        ) as exc:
             response = Response({"errors": exc.errors}, status=404)
 
         return response
@@ -68,7 +74,10 @@ class BookViewSet(ViewSet):
             response = Response({"data": data}, status=200)
         except (DegenerateAuthorsError, DuplicateBookTitleError) as exc:
             response = Response({"errors": exc.errors}, status=409)
-        except (LostAuthorsError, LostBooksError,) as exc:
+        except (
+            LostAuthorsError,
+            LostBooksError,
+        ) as exc:
             response = Response({"errors": exc.errors}, status=404)
 
         return response
