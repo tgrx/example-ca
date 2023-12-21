@@ -7,7 +7,8 @@
             "request": "launch",
             "module": "pytest",
             "args": [
-                "tests/e2e/api/v1/test_authors.py"
+                "tests/e2e/api/v2/test_authors.py",
+                "-k", "test_crud",
             ],
             "justMyCode": true
         },

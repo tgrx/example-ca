@@ -29,8 +29,9 @@ class AuthorViewSet(ViewSet):
 
     def create(self, request: Request) -> Response:
         try:
+            book_ids = [to_uuid(i) for i in request.data["book_ids"]]
             author = self.create_author(
-                book_ids=request.data["book_ids"],
+                book_ids=book_ids,
                 name=request.data["name"],
             )
             data = author.model_dump()
@@ -63,7 +64,13 @@ class AuthorViewSet(ViewSet):
     def partial_update(self, request: Request, pk: str) -> Response:
         author_id = to_uuid(pk)
         try:
-            author = self.update_author(author_id, name=request.data["name"])
+            name = request.data.get("name")
+            book_ids = request.data.get("book_ids")
+            if book_ids is not None:
+                book_ids = [to_uuid(i) for i in book_ids]
+            author = self.update_author(
+                author_id, book_ids=book_ids, name=name
+            )
             data = author.model_dump()
             response = Response({"data": data}, status=200)
         except (DegenerateAuthorsError, DuplicateAuthorNameError) as exc:

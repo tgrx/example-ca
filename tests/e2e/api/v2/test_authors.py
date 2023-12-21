@@ -29,15 +29,15 @@ def test_crud(
 
     cannot_create_with_taken_name(client, plato_el)
 
-    updated(client, plato, name=plato_en)
+    plato = updated(client, plato, name=plato_en)
     lost(client, plato_el)
     exists(client, plato_en)
 
-    updated(client, plato, books=[laws, republic])
-    updated(client, plato, books=[republic, laws])
-    updated(client, plato, books=[republic])
+    plato = updated(client, plato, books=[laws, republic])
+    plato = updated(client, plato, books=[republic, laws])
+    plato = updated(client, plato, books=[republic])
 
-    created(client, plato_el, [laws])
+    plato = created(client, plato_el, [laws])
     exists(client, plato_el)
     exists(client, plato_en)
 
@@ -88,7 +88,7 @@ def cannot_create_with_taken_name(client: AppClient, name: str, /) -> None:
         assert len(errors) == 1
 
         error = errors[0]
-        assert error == f"author name {name!r} is already taken"
+        assert error == f"The Author({name=!r}) already exists."
 
 
 def cannot_make_degenerate(client: AppClient, author: Author, /) -> None:
@@ -104,7 +104,11 @@ def cannot_make_degenerate(client: AppClient, author: Author, /) -> None:
         assert len(errors) == 1
 
         error = errors[0]
-        assert error == f"author name {author.name!r} is already taken"
+        expected_error = (
+            f"The Author(author_id={author.author_id}, name={author.name!r})"
+            " will become degenerate without books."
+        )
+        assert error == expected_error
 
 
 def cannot_update_lost(client: AppClient, faker: Faker) -> None:
@@ -122,7 +126,9 @@ def cannot_update_lost(client: AppClient, faker: Faker) -> None:
         assert len(errors) == 1
 
         error = errors[0]
-        assert error == f"no author with author_id={lost_author_id!s}"
+        assert (
+            error == f"The Author(author_id={lost_author_id}) does not exist."
+        )
 
 
 def cannot_update_with_taken_name(
@@ -189,9 +195,15 @@ def updated(
     books: Collection[Book] | None = None,
     name: str | None = None,
 ) -> Author:
-    book_ids = None if books is None else [i.book_id for i in books]
+    book_ids = (
+        None
+        if books is None
+        else [i.book_id for i in sorted(books, key=lambda i: i.title)]
+    )
     updated = client.update_author(
-        original.author_id, book_ids=book_ids, name=name
+        original.author_id,
+        book_ids=book_ids,
+        name=name,
     )
 
     assert updated.author_id == original.author_id
