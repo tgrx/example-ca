@@ -11,7 +11,7 @@ from clientlib.errors import AppClientError
 
 
 @pytest.mark.e2e
-def test_book_crud(
+def test_crud(
     client: AppClient,
     faker: Faker,
     grimm_jacob: Author,
@@ -76,14 +76,14 @@ def cannot_make_degenerates(
 
     errors = exc.response_body.get("errors")
     assert isinstance(errors, list)
-    assert len(errors) == 1
+    assert len(errors) == 2
 
-    error = errors[0]
-    expected_error = (
+    expected = [
         f"The Author(author_id={author.author_id}, name={author.name!r})"
         " will become degenerate without books."
-    )
-    assert error == expected_error
+        for author in authors
+    ]
+    assert errors == expected
 
 
 def cannot_create_with_taken_title(

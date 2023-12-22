@@ -29,6 +29,7 @@ class BookRepo:
     def delete(self, book_id: ID, /) -> None:
         try:
             record = OrmBook.objects.get(pk=book_id)
+            self._raise_on_degenerate_authors([], record)
             record.delete()
 
         except OrmBook.DoesNotExist:
