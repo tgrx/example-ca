@@ -23,7 +23,7 @@ class DegenerateAuthorsError(AppError):
     @cached_property
     def errors(self) -> list[str]:
         errors = []
-        for name, author_id in self.authors.items():
+        for name, author_id in sorted(self.authors.items()):
             author_id_str = f"{author_id=!s}" if author_id else ""
             name_str = f"{name=!r}"
             args = {author_id_str, name_str}

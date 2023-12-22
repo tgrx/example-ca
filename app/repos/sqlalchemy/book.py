@@ -102,10 +102,10 @@ class BookRepo:
             stmt_books_authors = table_books_authors.delete().where(
                 table_books_authors.c.book_id == book_id,
             )
-            conn.execute(stmt_books_authors)
             stmt_books = table_books.delete().where(
                 table_books.c.book_id == book_id,
             )
+            conn.execute(stmt_books_authors)
             conn.execute(stmt_books)
 
     def get_all(self, /) -> list[Book]:

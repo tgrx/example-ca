@@ -7,6 +7,7 @@ import attrs
 import sqlalchemy as sa
 from sqlalchemy import Connection
 from sqlalchemy import Engine
+from sqlalchemy.dialects.postgresql import aggregate_order_by
 
 from app.entities.errors import DegenerateAuthorsError
 from app.entities.errors import DuplicateAuthorNameError
@@ -205,7 +206,17 @@ class AuthorRepo:
             sa.select(
                 table_authors.c.author_id,
                 table_authors.c.name,
-                sa.func.array_agg(table_books.c.book_id).label("book_ids"),
+                sa.func.coalesce(
+                    sa.func.array_agg(
+                        aggregate_order_by(  # type: ignore
+                            table_books.c.book_id,
+                            table_books.c.title.asc(),
+                        ),
+                    ).filter(
+                        ~table_books.c.book_id.is_(None),
+                    ),
+                    [],
+                ).label("book_ids"),
             )
             .select_from(
                 table_authors,
@@ -220,6 +231,9 @@ class AuthorRepo:
             )
             .group_by(
                 table_authors.c.author_id,
+            )
+            .order_by(
+                table_authors.c.name,
             )
         )
 

@@ -81,7 +81,7 @@ def cannot_make_degenerates(
     expected = [
         f"The Author(author_id={author.author_id}, name={author.name!r})"
         " will become degenerate without books."
-        for author in authors
+        for author in sorted(authors, key=lambda i: i.name)
     ]
     assert errors == expected
 
