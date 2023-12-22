@@ -85,8 +85,14 @@ class AppClient:
 
         return author
 
-    def create_book(self, /, *, title: str) -> Book:
-        req = CreateBookRequest(title=title)
+    def create_book(
+        self,
+        /,
+        *,
+        title: str,
+        author_ids: list[ID] | None = None,
+    ) -> Book:
+        req = CreateBookRequest(author_ids=author_ids, title=title)
 
         book = self._api_call(
             method="post",

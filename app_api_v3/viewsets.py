@@ -31,6 +31,7 @@ class BookViewSet(ViewSet):
         try:
             book = self.create_book(title=request.data["title"])
             if author_ids := request.data.get("author_ids"):
+                author_ids = [to_uuid(i) for i in author_ids]
                 book = self.update_book(book.book_id, author_ids=author_ids)
             data = book.model_dump()
             response = Response({"data": data}, status=201)
@@ -65,9 +66,12 @@ class BookViewSet(ViewSet):
     def partial_update(self, request: Request, pk: str) -> Response:
         try:
             book_id = to_uuid(pk)
+            author_ids = request.data.get("author_ids")
+            if author_ids is not None:
+                author_ids = [to_uuid(i) for i in author_ids]
             book = self.update_book(
                 book_id,
-                author_ids=request.data.get("author_ids"),
+                author_ids=author_ids,
                 title=request.data.get("title"),
             )
             data = book.model_dump()

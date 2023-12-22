@@ -55,6 +55,7 @@ class CreateAuthorResponse(ApiResponse[Author]):
 
 @final
 class CreateBookRequest(ApiRequest):
+    author_ids: list[ID] | None = None
     title: str
 
 
