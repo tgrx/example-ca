@@ -1,3 +1,4 @@
+from faker import Faker
 import pytest
 
 from app.entities.models import ID
@@ -8,48 +9,48 @@ from clientlib.client import AppClient
 
 @pytest.mark.e2e
 def test_book_crud(
-    *,
     client: AppClient,
-    installed_authors: dict[ID, Author],
+    faker: Faker,
+    grimm_jacob: Author,
+    grimm_wilhelm: Author,
 ) -> None:
-    pushkin = next(
-        filter(lambda a: "Pushkin" in a.name, installed_authors.values())
-    )
-    pelevin = next(
-        filter(lambda a: "Pelevin" in a.name, installed_authors.values())
-    )
+    title_de = "Hänsel und Gretel"
+    title_en = "Hansel and Gretel"
 
-    title_pushkin = f"Biography of {pushkin.name}"
-    title_pelevin = f"Biography of {pelevin.name}"
+    lost(client, title_de)
+    lost(client, title_en)
 
-    no_book(client, title_pushkin)
-    no_book(client, title_pelevin)
+    created(client, title_de, [grimm_jacob, grimm_wilhelm])
+    book_en = exists(client, title_de)
+    lost(client, title_en)
 
-    book_created(client, title_pushkin, [pushkin])
-    book = book_exists(client, authors=[pushkin], title=title_pushkin)
-    no_book(client, title_pelevin)
+    cannot_create_with_taken_title(client, title_de)
 
-    book_updated(
-        client,
-        book.book_id,
-        authors=[pushkin, pelevin],
-        title=title_pelevin,
-    )
-    book_exists(client, authors=[pushkin, pelevin], title=title_pelevin)
-    no_book(client, title_pushkin)
+    book_en = updated(client, book_en, title=title_en)
+    lost(client, title_de)
+    exists(client, title_en)
 
-    book_updated(client, book.book_id, authors=[pushkin])
-    book_exists(client, authors=[pushkin], title=title_pelevin)
+    book_en = updated(client, book_en, authors=[grimm_jacob, grimm_jacob])
+    book_en = updated(client, book_en, authors=[grimm_jacob, grimm_wilhelm])
+    book_en = updated(client, book_en, authors=[grimm_jacob])
+    book_en = updated(client, book_en, authors=[grimm_wilhelm, grimm_jacob])
+    book_en = updated(client, book_en, authors=[grimm_wilhelm])
 
-    book_updated(client, book.book_id, authors=[pelevin])
-    book_exists(client, authors=[pelevin], title=title_pelevin)
+    cannot_update_lost(client, faker)
 
-    book_updated(client, book.book_id, authors=[])
-    book_exists(client, authors=[], title=title_pelevin)
+    created(client, title=title_de)
+    exists(client, title_de)
+    exists(client, title_en)
 
-    delete_book(client, title_pelevin)
-    no_book(client, title_pelevin)
-    no_book(client, title_pushkin)
+    delete(client, title_de)
+    lost(client, title_de)
+    exists(client, title_en)
+
+    delete(client, title_en)
+    lost(client, title_de)
+    lost(client, title_en)
+
+    cannot_make_degenerates(client, [grimm_jacob, grimm_wilhelm])
 
 
 def book_created(
