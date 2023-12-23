@@ -61,10 +61,6 @@ def warden(
                 )
                 errors.append(msg)
 
-                conn.execute(
-                    sa.text(f"truncate {ti.name} restart identity cascade;")
-                )
-
     if errors:
         msg = "\n\n".join(errors)
         raise AssertionError(msg)

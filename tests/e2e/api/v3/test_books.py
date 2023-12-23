@@ -1,5 +1,6 @@
 from typing import Collection
 from uuid import uuid4
+from devtools import debug
 
 import pytest
 from faker import Faker
@@ -139,6 +140,7 @@ def created(
     if authors:
         author_ids = [i.author_id for i in authors]
     book = client.create_book(author_ids=author_ids, title=title)
+    debug(XXX_book=book, XXX_authors=authors)
 
     assert book.book_id
     assert book.title == title
