@@ -11,16 +11,17 @@ from app.entities.errors import DuplicateBookTitleError
 from app.entities.errors import LostAuthorsError
 from app.entities.errors import LostBooksError
 from app.entities.models import to_uuid
-from app.repos.django.book import BookRepo
 from app.usecases.book import CreateBookUseCase
 from app.usecases.book import DeleteBookUseCase
 from app.usecases.book import FindBooksUseCase
 from app.usecases.book import UpdateBookUseCase
+from app.xxx import xxx_book_repo
 
 
 @final
 class BookViewSet(ViewSet):
-    repo: Final = BookRepo()
+    # repo: Final = BookRepo()
+    repo: Final = xxx_book_repo
 
     create_book: Final = CreateBookUseCase(repo=repo)
     delete_book: Final = DeleteBookUseCase(repo=repo)

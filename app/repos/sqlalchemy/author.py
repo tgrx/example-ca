@@ -14,6 +14,7 @@ from app.entities.errors import DuplicateAuthorNameError
 from app.entities.errors import LostAuthorsError
 from app.entities.models import ID
 from app.entities.models import Author
+from app.entities.models import to_uuid
 from app.repos.sqlalchemy.tables import table_authors
 from app.repos.sqlalchemy.tables import table_books
 from app.repos.sqlalchemy.tables import table_books_authors
@@ -25,13 +26,47 @@ class AuthorRepo:
     engine: Engine
 
     def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
-        author_id = uuid4()
+        conn: Connection
+        with self.engine.begin() as conn:
+            self._raise_on_duplicate_name(conn, name)
+            clean_book_ids = self._clean_book_ids(conn, book_ids)
+            self._raise_on_degenerate_author(name, clean_book_ids)
+            author_id = self._create_without_relations(conn, name=name)
+            self._assing_books(conn, author_id, clean_book_ids)
 
-        query_insert_author = (
+        author = self.get_by_id(author_id)
+        if author is None:
+            raise LostAuthorsError(author_ids=[author_id])
+
+        return author
+
+    def _raise_on_degenerate_author(
+        self,
+        name: str,
+        book_ids: Collection[ID],
+        /,
+    ) -> None:
+        if not book_ids:
+            raise DegenerateAuthorsError(authors={name: None})
+
+    def _raise_on_duplicate_name(self, conn: Connection, name: str, /) -> None:
+        sql = sa.select(sa.exists().where(table_authors.c.name == name))
+        name_is_taken = conn.execute(sql).scalar()
+        if name_is_taken:
+            raise DuplicateAuthorNameError(name=name)
+
+    def _create_without_relations(
+        self,
+        conn: Connection,
+        /,
+        *,
+        name: str,
+    ) -> ID:
+        sql = (
             sa.insert(table_authors)
             .values(
                 {
-                    table_authors.c.author_id: author_id,
+                    table_authors.c.author_id: uuid4(),
                     table_authors.c.name: name,
                 }
             )
@@ -40,45 +75,45 @@ class AuthorRepo:
             )
         )
 
-        conn: Connection
-        with self.engine.begin() as conn:
-            clean_book_ids = self._clean_book_ids(conn, book_ids)
-            if not clean_book_ids:
-                raise DegenerateAuthorsError(authors={name: None})
+        author_id_raw = cast(ID, conn.execute(sql).scalar())
+        author_id = to_uuid(author_id_raw)
 
-            cursor = conn.execute(query_insert_author)
-            author_id = cast(ID, cursor.scalar())
+        return author_id
 
-            query_assign_to_books = sa.insert(table_books_authors).values(
-                [
-                    {
-                        table_books_authors.c.author_id: author_id,
-                        table_books_authors.c.book_id: book_id,
-                    }
-                    for book_id in clean_book_ids
-                ]
-            )
-            conn.execute(query_assign_to_books)
-
-        author = self.get_by_id(author_id)
-        if author is None:
-            raise LostAuthorsError(author_ids=[author_id])
-
-        return author
+    def _assing_books(
+        self,
+        conn: Connection,
+        author_id: ID,
+        clean_book_ids: list[ID],
+        /,
+    ) -> None:
+        values = [
+            {
+                table_books_authors.c.author_id: author_id,
+                table_books_authors.c.book_id: book_id,
+            }
+            for book_id in clean_book_ids
+        ]
+        sql = sa.insert(table_books_authors).values(values)
+        conn.execute(sql)
 
     def delete(self, author_id: ID, /) -> None:
-        stmt_books_authors = table_books_authors.delete().where(
-            table_books_authors.c.author_id == author_id,
-        )
-
-        stmt_authors = table_authors.delete().where(
-            table_authors.c.author_id == author_id,
-        )
-
         conn: Connection
         with self.engine.begin() as conn:
-            conn.execute(stmt_books_authors)
-            conn.execute(stmt_authors)
+            self._unassign_books(conn, author_id)
+            self._delete(conn, author_id)
+
+    def _unassign_books(self, conn: Connection, author_id:ID, /) -> None:
+        sql = table_books_authors.delete().where(
+            table_books_authors.c.author_id == author_id,
+        )
+        conn.execute(sql)
+
+    def _delete(self, conn:Connection, author_id:ID, /) -> None:
+        sql = table_authors.delete().where(
+            table_authors.c.author_id == author_id,
+        )
+        conn.execute(sql)
 
     def get_all(self, /) -> list[Author]:
         stmt = self.__stmt_all_authors()
@@ -185,7 +220,7 @@ class AuthorRepo:
         if not book_ids:
             return []
 
-        stmt = (
+        sql = (
             sa.select(
                 table_books.c.book_id,
             )
@@ -195,7 +230,7 @@ class AuthorRepo:
             )
         )
 
-        cursor = conn.execute(stmt)
+        cursor = conn.execute(sql)
         rows = cursor.fetchall()
         clean_book_ids = [row.book_id for row in rows]
         return clean_book_ids
