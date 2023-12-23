@@ -6,6 +6,7 @@ import attrs
 from django.db import transaction
 
 from app.entities.errors import DegenerateAuthorsError
+from app.entities.errors import DuplicateAuthorNameError
 from app.entities.errors import LostAuthorsError
 from app.entities.errors import LostBooksError
 from app.entities.models import ID
@@ -18,6 +19,7 @@ from app_api_v3.models import Book as OrmBook
 @attrs.frozen(kw_only=True, slots=True)
 class AuthorRepo:
     def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
+        self._raise_on_duplicate_name(name)
         clean_book_ids = self._clean_book_ids(book_ids)
         self._raise_on_degenerate_author(clean_book_ids, name=name)
         with transaction.atomic():
@@ -66,28 +68,29 @@ class AuthorRepo:
         book_ids: Collection[ID] | None = None,
         name: str | None = None,
     ) -> Author:
-        orm_author = OrmAuthor.objects.filter(pk=author_id).first()
-        if not orm_author:
+        current = OrmAuthor.objects.filter(pk=author_id).first()
+        if not current:
             raise LostAuthorsError(author_ids=[author_id])
 
         if book_ids is not None:
             new_book_ids = self._clean_book_ids(book_ids)
             self._raise_on_degenerate_author(
                 new_book_ids,
-                author_id=orm_author.pk,
-                name=orm_author.name,
+                author_id=current.pk,
+                name=current.name,
             )
 
         with transaction.atomic():
-            if name is not None:
-                orm_author.name = name
-                orm_author.save()
+            if name is not None and name != current.name:
+                self._raise_on_duplicate_name(name)
+                current.name = name
+                current.save()
 
             if book_ids is not None:
-                orm_author.books.clear()
-                orm_author.books.add(*new_book_ids)  # type: ignore
+                current.books.clear()
+                current.books.add(*new_book_ids)  # type: ignore
 
-        author = Author.model_validate(orm_author)
+        author = Author.model_validate(current)
 
         return author
 
@@ -120,6 +123,10 @@ class AuthorRepo:
             return
 
         raise DegenerateAuthorsError(authors={name: author_id})
+
+    def _raise_on_duplicate_name(self, name: str, /) -> None:
+        if OrmAuthor.objects.filter(name=name).exists():
+            raise DuplicateAuthorNameError(name=name)
 
 
 __all__ = ("AuthorRepo",)

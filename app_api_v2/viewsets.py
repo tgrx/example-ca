@@ -11,17 +11,16 @@ from app.entities.errors import DuplicateAuthorNameError
 from app.entities.errors import LostAuthorsError
 from app.entities.errors import LostBooksError
 from app.entities.models import to_uuid
+from app.repos.django.author import AuthorRepo
 from app.usecases.author import CreateAuthorUseCase
 from app.usecases.author import DeleteAuthorUseCase
 from app.usecases.author import FindAuthorsUseCase
 from app.usecases.author import UpdateAuthorUseCase
-from app.xxx import xxx_author_repo
 
 
 @final
 class AuthorViewSet(ViewSet):
-    # repo: Final = AuthorRepo()
-    repo: Final = xxx_author_repo
+    repo: Final = AuthorRepo()
 
     create_author: Final = CreateAuthorUseCase(repo=repo)
     delete_author: Final = DeleteAuthorUseCase(repo=repo)

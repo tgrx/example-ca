@@ -5,14 +5,13 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from app.repos.django.author import AuthorRepo
 from app.usecases.author import FindAuthorsUseCase
-from app.xxx import xxx_author_repo
 
 
 @final
 class AuthorViewSet(ViewSet):
-    # repo: Final = AuthorRepo()
-    repo: Final = xxx_author_repo
+    repo: Final = AuthorRepo()
 
     find_authors: Final = FindAuthorsUseCase(repo=repo)
 

@@ -7,6 +7,7 @@ from uuid import uuid4
 import attrs
 
 from app.entities.errors import DegenerateAuthorsError
+from app.entities.errors import DuplicateAuthorNameError
 from app.entities.errors import LostAuthorsError
 from app.entities.errors import LostBooksError
 from app.entities.models import ID
@@ -22,6 +23,7 @@ class AuthorRepo:
     index_books: Mapping[ID, Book]
 
     def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
+        self._raise_on_duplicate_name(name)
         author_id = uuid4()
         new_book_ids = self._clean_book_ids(book_ids)
 
@@ -99,6 +101,7 @@ class AuthorRepo:
         if book_ids is not None:
             update["book_ids"] = cleaned_book_ids
         if name is not None:
+            self._raise_on_duplicate_name(name)
             update["name"] = name
 
         author = author.model_copy(update=update)
@@ -140,6 +143,11 @@ class AuthorRepo:
             author_id = author.author_id if indexed else None
             authors = {author.name: author_id}
             raise DegenerateAuthorsError(authors=authors)
+
+    def _raise_on_duplicate_name(self, name: str, /) -> None:
+        for author in self.index_authors.values():
+            if author.name == name:
+                raise DuplicateAuthorNameError(name=name)
 
     def _update_references(self, author: Author | None, /) -> None:
         book_ids_to_discard = (

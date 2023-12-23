@@ -6,6 +6,7 @@ import attrs
 from django.db import transaction
 
 from app.entities.errors import DegenerateAuthorsError
+from app.entities.errors import DuplicateBookTitleError
 from app.entities.errors import LostAuthorsError
 from app.entities.errors import LostBooksError
 from app.entities.models import ID
@@ -18,6 +19,7 @@ from app_api_v3.models import Book as OrmBook
 @attrs.frozen(kw_only=True, slots=True)
 class BookRepo:
     def create(self, /, *, title: str) -> Book:
+        self._raise_on_duplicate_title(title)
         book_id = uuid4()
         orm_book = OrmBook(pk=book_id, title=title)
         orm_book.save()
@@ -70,24 +72,25 @@ class BookRepo:
         title: str | None = None,
     ) -> Book:
         try:
-            orm_book = OrmBook.objects.get(pk=book_id)
+            current = OrmBook.objects.get(pk=book_id)
         except OrmBook.DoesNotExist as err:
             raise LostBooksError(book_ids=[book_id]) from err
 
         if author_ids is not None:
             new_author_ids = self._clean_author_ids(author_ids)
-            self._raise_on_degenerate_authors(orm_book, new_author_ids)
+            self._raise_on_degenerate_authors(current, new_author_ids)
 
         with transaction.atomic():
-            if title is not None:
-                orm_book.title = title
-                orm_book.save()
+            if title is not None and title != current.title:
+                self._raise_on_duplicate_title(title)
+                current.title = title
+                current.save()
 
             if author_ids is not None:
-                orm_book.authors.clear()
-                orm_book.authors.add(*new_author_ids)  # type: ignore
+                current.authors.clear()
+                current.authors.add(*new_author_ids)  # type: ignore
 
-        book = Book.model_validate(orm_book)
+        book = Book.model_validate(current)
 
         return book
 
@@ -132,6 +135,10 @@ class BookRepo:
         if degenerate_authors:
             degenerate_map = {i.name: i.pk for i in degenerate_authors}
             raise DegenerateAuthorsError(authors=degenerate_map)
+
+    def _raise_on_duplicate_title(self, title: str, /) -> None:
+        if OrmBook.objects.filter(title=title).exists():
+            raise DuplicateBookTitleError(title=title)
 
 
 __all__ = ("BookRepo",)

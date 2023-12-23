@@ -19,7 +19,7 @@ class Book(models.Model):
 
     authors = models.ManyToManyField(Author, related_name="books")
     book_id = models.UUIDField(primary_key=True)
-    title = models.TextField()
+    title = models.TextField(unique=True)
 
     @property
     def author_ids(self, /) -> list[ID]:

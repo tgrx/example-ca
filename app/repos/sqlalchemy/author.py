@@ -30,7 +30,7 @@ class AuthorRepo:
         with self.engine.begin() as conn:
             self._raise_on_duplicate_name(conn, name)
             clean_book_ids = self._clean_book_ids(conn, book_ids)
-            self._raise_on_degenerate_author(name, clean_book_ids)
+            self._raise_on_degenerate_author(clean_book_ids, name=name)
             author_id = self._create_without_relations(conn, name=name)
             self._assing_books(conn, author_id, clean_book_ids)
 
@@ -105,7 +105,11 @@ class AuthorRepo:
 
             if book_ids is not None and book_ids != current.book_ids:
                 clean_book_ids = self._clean_book_ids(conn, book_ids)
-                self._raise_on_degenerate_author(current.name, clean_book_ids)
+                self._raise_on_degenerate_author(
+                    clean_book_ids,
+                    author_id=author_id,
+                    name=current.name,
+                )
                 self._unassign_books(conn, author_id)
                 self._assing_books(conn, author_id, clean_book_ids)
 
@@ -189,12 +193,14 @@ class AuthorRepo:
 
     def _raise_on_degenerate_author(
         self,
-        name: str,
         book_ids: Collection[ID],
         /,
+        *,
+        name: str,
+        author_id: ID | None = None,
     ) -> None:
         if not book_ids:
-            raise DegenerateAuthorsError(authors={name: None})
+            raise DegenerateAuthorsError(authors={name: author_id})
 
     def _raise_on_duplicate_name(self, conn: Connection, name: str, /) -> None:
         sql = sa.select(sa.exists().where(table_authors.c.name == name))

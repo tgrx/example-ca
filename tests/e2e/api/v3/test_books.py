@@ -2,7 +2,6 @@ from typing import Collection
 from uuid import uuid4
 
 import pytest
-from devtools import debug
 from faker import Faker
 
 from app.entities.models import Author
@@ -140,7 +139,6 @@ def created(
     if authors:
         author_ids = [i.author_id for i in authors]
     book = client.create_book(author_ids=author_ids, title=title)
-    debug(XXX_book=book, XXX_authors=authors)
 
     assert book.book_id
     assert book.title == title

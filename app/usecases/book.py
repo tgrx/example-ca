@@ -3,8 +3,6 @@ from typing import final
 
 import attrs
 
-from app.entities.errors import DuplicateBookTitleError
-from app.entities.errors import LostBooksError
 from app.entities.interfaces import BookRepo
 from app.entities.models import ID
 from app.entities.models import Book
@@ -20,16 +18,8 @@ class CreateBookUseCase:
     repo: BookRepo
 
     def __call__(self, /, *, title: str) -> Book:
-        self.ensure_title_is_unique(title)
-
         book = self.repo.create(title=title)
-
         return book
-
-    def ensure_title_is_unique(self, title: str) -> None:
-        title_is_taken = self.repo.get_by_title(title) is not None
-        if title_is_taken:
-            raise DuplicateBookTitleError(title=title)
 
 
 @final
@@ -94,34 +84,8 @@ class UpdateBookUseCase:
         author_ids: Collection[ID] | None = None,
         title: str | None = None,
     ) -> Book:
-        self.ensure_book_exists(book_id)
-        self.ensure_title_is_unique(book_id, title)
-
         book = self.repo.update(book_id, author_ids=author_ids, title=title)
-
         return book
-
-    def ensure_book_exists(self, book_id: ID, /) -> None:
-        book = self.repo.get_by_id(book_id)
-        if book is None:
-            raise LostBooksError(book_ids=[book_id])
-
-    def ensure_title_is_unique(
-        self,
-        book_id: ID,
-        title: str | None,
-        /,
-    ) -> None:
-        if title is None:
-            return
-
-        book = self.repo.get_by_id(book_id)
-        if book is None:
-            raise LostBooksError(book_ids=[book_id])
-
-        title_is_taken = self.repo.get_by_title(title) is not None
-        if title != book.title and title_is_taken:
-            raise DuplicateBookTitleError(title=title)
 
 
 __all__ = (
