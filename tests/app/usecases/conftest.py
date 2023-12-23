@@ -13,40 +13,52 @@ from app.usecases.book import UpdateBookUseCase
 
 
 @pytest.fixture(scope="function")
-def create_author(*, author_repo: AuthorRepo) -> CreateAuthorUseCase:
+def create_author(author_repo: AuthorRepo) -> CreateAuthorUseCase:
     return CreateAuthorUseCase(repo=author_repo)
 
 
 @pytest.fixture(scope="function")
-def delete_author(*, author_repo: AuthorRepo) -> DeleteAuthorUseCase:
-    return DeleteAuthorUseCase(repo=author_repo)
-
-
-@pytest.fixture(scope="function")
-def find_authors(*, author_repo: AuthorRepo) -> FindAuthorsUseCase:
-    return FindAuthorsUseCase(repo=author_repo)
-
-
-@pytest.fixture(scope="function")
-def update_author(*, author_repo: AuthorRepo) -> UpdateAuthorUseCase:
-    return UpdateAuthorUseCase(repo=author_repo)
-
-
-@pytest.fixture(scope="function")
-def create_book(*, book_repo: BookRepo) -> CreateBookUseCase:
+def create_book(book_repo: BookRepo) -> CreateBookUseCase:
     return CreateBookUseCase(repo=book_repo)
 
 
 @pytest.fixture(scope="function")
-def delete_book(*, book_repo: BookRepo) -> DeleteBookUseCase:
+def delete_author(author_repo: AuthorRepo) -> DeleteAuthorUseCase:
+    return DeleteAuthorUseCase(repo=author_repo)
+
+
+@pytest.fixture(scope="function")
+def delete_book(book_repo: BookRepo) -> DeleteBookUseCase:
     return DeleteBookUseCase(repo=book_repo)
 
 
 @pytest.fixture(scope="function")
-def find_books(*, book_repo: BookRepo) -> FindBooksUseCase:
+def find_authors(author_repo: AuthorRepo) -> FindAuthorsUseCase:
+    return FindAuthorsUseCase(repo=author_repo)
+
+
+@pytest.fixture(scope="function")
+def find_books(book_repo: BookRepo) -> FindBooksUseCase:
     return FindBooksUseCase(repo=book_repo)
 
 
 @pytest.fixture(scope="function")
-def update_book(*, book_repo: BookRepo) -> UpdateBookUseCase:
+def update_author(author_repo: AuthorRepo) -> UpdateAuthorUseCase:
+    return UpdateAuthorUseCase(repo=author_repo)
+
+
+@pytest.fixture(scope="function")
+def update_book(book_repo: BookRepo) -> UpdateBookUseCase:
     return UpdateBookUseCase(repo=book_repo)
+
+
+__all__ = (
+    "create_author",
+    "create_book",
+    "delete_author",
+    "delete_book",
+    "find_authors",
+    "find_books",
+    "update_author",
+    "update_book",
+)

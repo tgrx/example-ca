@@ -10,58 +10,9 @@ from sqlalchemy import create_engine
 from sqlalchemy import inspect
 
 from app.entities.config import Config
-from app.entities.models import ID
-from app.entities.models import Author
-from app.repos.sqlalchemy.author import AuthorRepo
-from app.repos.sqlalchemy.book import BookRepo
 from app.repos.sqlalchemy.tables import table_authors
 from app.repos.sqlalchemy.tables import table_books
 from app.repos.sqlalchemy.tables import table_books_authors
-
-
-@pytest.fixture(scope="session")
-def installed_authors(
-    *,
-    primary_database_engine: Engine,
-) -> Iterator[dict[UUID, Author]]:
-    repo = AuthorRepo(engine=primary_database_engine)
-
-    authors = [
-        repo.create(name=name)
-        for name in [
-            "Alexander Pushkin",
-            "Victor Pelevin",
-        ]
-    ]
-
-    authors_map = {author.author_id: author for author in authors}
-
-    yield authors_map
-
-    for author_id in authors_map:
-        repo.delete(author_id)
-
-
-@pytest.fixture(scope="session")
-def installed_authors_with_books(
-    *,
-    installed_authors: dict[ID, Author],
-    primary_database_engine: Engine,
-) -> Iterator[dict[ID, Author]]:
-    repo = BookRepo(engine=primary_database_engine)
-
-    books = [
-        repo.create(
-            author_ids=[author.author_id],
-            title=f"Bio of {author.name}",
-        )
-        for author in installed_authors.values()
-    ]
-
-    yield installed_authors
-
-    for book in books:
-        repo.delete(book.book_id)
 
 
 @pytest.fixture(scope="session")
@@ -109,10 +60,6 @@ def warden(
                     )
                 )
                 errors.append(msg)
-
-                conn.execute(
-                    sa.text(f"truncate {ti.name} restart identity cascade;")
-                )
 
     if errors:
         msg = "\n\n".join(errors)

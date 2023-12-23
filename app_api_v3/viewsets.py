@@ -6,6 +6,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from app.entities.errors import DegenerateAuthorsError
+from app.entities.errors import DuplicateBookTitleError
+from app.entities.errors import LostAuthorsError
+from app.entities.errors import LostBooksError
 from app.entities.models import to_uuid
 from app.repos.django.book import BookRepo
 from app.usecases.book import CreateBookUseCase
@@ -24,19 +28,30 @@ class BookViewSet(ViewSet):
     update_book: Final = UpdateBookUseCase(repo=repo)
 
     def create(self, request: Request) -> Response:
-        book = self.create_book(
-            author_ids=request.data["authors"],
-            title=request.data["title"],
-        )
-        data = book.model_dump()
-        response = Response({"data": data}, status=201)
+        try:
+            book = self.create_book(title=request.data["title"])
+            if author_ids := request.data.get("author_ids"):
+                author_ids = [to_uuid(i) for i in author_ids]
+                book = self.update_book(book.book_id, author_ids=author_ids)
+            data = book.model_dump()
+            response = Response({"data": data}, status=201)
+        except (DegenerateAuthorsError, DuplicateBookTitleError) as exc:
+            response = Response({"errors": exc.errors}, status=409)
+        except (
+            LostAuthorsError,
+            LostBooksError,
+        ) as exc:
+            response = Response({"errors": exc.errors}, status=404)
 
         return response
 
     def destroy(self, request: Request, pk: str) -> Response:
-        book_id = to_uuid(pk)
-        self.delete_book(book_id)
-        response = Response({"data": None})
+        try:
+            book_id = to_uuid(pk)
+            self.delete_book(book_id)
+            response = Response({"data": None})
+        except DegenerateAuthorsError as exc:
+            response = Response({"errors": exc.errors}, status=409)
 
         return response
 
@@ -49,14 +64,25 @@ class BookViewSet(ViewSet):
         return response
 
     def partial_update(self, request: Request, pk: str) -> Response:
-        book_id = to_uuid(pk)
-        book = self.update_book(
-            book_id,
-            author_ids=request.data.get("authors"),
-            title=request.data.get("title"),
-        )
-        data = book.model_dump()
-        response = Response({"data": data}, status=200)
+        try:
+            book_id = to_uuid(pk)
+            author_ids = request.data.get("author_ids")
+            if author_ids is not None:
+                author_ids = [to_uuid(i) for i in author_ids]
+            book = self.update_book(
+                book_id,
+                author_ids=author_ids,
+                title=request.data.get("title"),
+            )
+            data = book.model_dump()
+            response = Response({"data": data}, status=200)
+        except (DegenerateAuthorsError, DuplicateBookTitleError) as exc:
+            response = Response({"errors": exc.errors}, status=409)
+        except (
+            LostAuthorsError,
+            LostBooksError,
+        ) as exc:
+            response = Response({"errors": exc.errors}, status=404)
 
         return response
 

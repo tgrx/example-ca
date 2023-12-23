@@ -2,10 +2,31 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Tests",
+            "name": "Failing Test",
             "type": "python",
             "request": "launch",
             "module": "pytest",
+            "args": [
+                "tests/e2e/api/v3/test_books.py",
+                "-k", "test_crud",
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Tests - All",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "justMyCode": true
+        },
+        {
+            "name": "Tests - Unit",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-m", "unit",
+            ],
             "justMyCode": true
         },
         {

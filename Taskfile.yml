@@ -69,6 +69,18 @@ tasks:
     dir: "{{.ROOT_DIR}}"
     run: once
 
+  db-reset:
+    cmds:
+      - docker compose exec -it postgres psql -U ca -d ca -c 'truncate table books_authors restart identity cascade;'
+      - docker compose exec -it postgres psql -U ca -d ca -c 'truncate table books restart identity cascade;'
+      - docker compose exec -it postgres psql -U ca -d ca -c 'truncate table authors restart identity cascade;'
+      
+    desc: reset DB tables
+    dir: "{{.ROOT_DIR}}"
+    preconditions:
+      - docker info
+    run: once
+
   docker-down:
     cmds:
       - docker compose down --remove-orphans

@@ -13,3 +13,9 @@ def config() -> Config:
 def faker() -> Faker:
     russian_faker = Faker(["ru-RU"])
     return russian_faker
+
+
+__all__ = (
+    "config",
+    "faker",
+)

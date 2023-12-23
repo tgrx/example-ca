@@ -6,8 +6,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from app.entities.errors import DegenerateAuthorsError
 from app.entities.errors import DuplicateAuthorNameError
-from app.entities.errors import LostAuthorError
+from app.entities.errors import LostAuthorsError
+from app.entities.errors import LostBooksError
 from app.entities.models import to_uuid
 from app.repos.django.author import AuthorRepo
 from app.usecases.author import CreateAuthorUseCase
@@ -27,11 +29,20 @@ class AuthorViewSet(ViewSet):
 
     def create(self, request: Request) -> Response:
         try:
-            author = self.create_author(name=request.data["name"])
+            book_ids = [to_uuid(i) for i in request.data["book_ids"]]
+            author = self.create_author(
+                book_ids=book_ids,
+                name=request.data["name"],
+            )
             data = author.model_dump()
             response = Response({"data": data}, status=201)
-        except DuplicateAuthorNameError as exc:
+        except (DegenerateAuthorsError, DuplicateAuthorNameError) as exc:
             response = Response({"errors": exc.errors}, status=409)
+        except (
+            LostAuthorsError,
+            LostBooksError,
+        ) as exc:
+            response = Response({"errors": exc.errors}, status=404)
 
         return response
 
@@ -53,13 +64,22 @@ class AuthorViewSet(ViewSet):
     def partial_update(self, request: Request, pk: str) -> Response:
         author_id = to_uuid(pk)
         try:
-            author = self.update_author(author_id, name=request.data["name"])
+            name = request.data.get("name")
+            book_ids = request.data.get("book_ids")
+            if book_ids is not None:
+                book_ids = [to_uuid(i) for i in book_ids]
+            author = self.update_author(
+                author_id, book_ids=book_ids, name=name
+            )
             data = author.model_dump()
             response = Response({"data": data}, status=200)
-        except LostAuthorError as exc:
-            response = Response({"errors": exc.errors}, status=404)
-        except DuplicateAuthorNameError as exc:
+        except (DegenerateAuthorsError, DuplicateAuthorNameError) as exc:
             response = Response({"errors": exc.errors}, status=409)
+        except (
+            LostAuthorsError,
+            LostBooksError,
+        ) as exc:
+            response = Response({"errors": exc.errors}, status=404)
 
         return response
 
@@ -70,7 +90,7 @@ class AuthorViewSet(ViewSet):
         author_id = to_uuid(pk)
         authors = self.find_authors(author_id=author_id)
         if not authors:
-            payload["errors"] = LostAuthorError(author_id=author_id).errors
+            payload["errors"] = LostAuthorsError(author_ids=[author_id]).errors
             status = 404
         else:
             author = authors[0]

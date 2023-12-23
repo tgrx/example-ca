@@ -39,12 +39,13 @@ class Model(BaseModel):
 @final
 class Author(Model):
     author_id: ID
+    book_ids: list[ID]
     name: str
 
 
 @final
 class Book(Model):
-    authors: list[Author]
+    author_ids: list[ID]
     book_id: ID
     title: str
 

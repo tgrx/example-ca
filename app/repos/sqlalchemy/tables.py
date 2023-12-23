@@ -9,7 +9,7 @@ table_authors: Final = sa.Table(
     metadata,
     sa.Column(
         "author_id",
-        sa.UUID(as_uuid=True),
+        sa.Uuid(as_uuid=True),
         primary_key=True,
     ),
     sa.Column(
@@ -26,7 +26,7 @@ table_books: Final = sa.Table(
     metadata,
     sa.Column(
         "book_id",
-        sa.UUID(as_uuid=True),
+        sa.Uuid(as_uuid=True),
         primary_key=True,
     ),
     sa.Column(

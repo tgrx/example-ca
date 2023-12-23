@@ -44,6 +44,7 @@ class AllBooksResponse(ApiResponse[list[Book]]):
 
 @final
 class CreateAuthorRequest(ApiRequest):
+    book_ids: list[ID]
     name: str
 
 
@@ -54,7 +55,7 @@ class CreateAuthorResponse(ApiResponse[Author]):
 
 @final
 class CreateBookRequest(ApiRequest):
-    authors: list[ID]
+    author_ids: list[ID] | None = None
     title: str
 
 
@@ -85,7 +86,8 @@ class GetBookResponse(ApiResponse[Book]):
 
 @final
 class UpdateAuthorRequest(ApiRequest):
-    name: str
+    book_ids: list[ID] | None = None
+    name: str | None = None
 
 
 @final
@@ -95,7 +97,7 @@ class UpdateAuthorResponse(ApiResponse[Author]):
 
 @final
 class UpdateBookRequest(ApiRequest):
-    authors: list[ID] | None = None
+    author_ids: list[ID] | None = None
     title: str | None = None
 
 

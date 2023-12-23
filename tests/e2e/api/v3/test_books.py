@@ -1,134 +1,208 @@
-import pytest
+from typing import Collection
+from uuid import uuid4
 
-from app.entities.models import ID
+import pytest
+from faker import Faker
+
 from app.entities.models import Author
 from app.entities.models import Book
 from clientlib.client import AppClient
+from clientlib.errors import AppClientError
 
 
 @pytest.mark.e2e
-def test_book_crud(
-    *,
+def test_crud(
     client: AppClient,
-    installed_authors: dict[ID, Author],
+    faker: Faker,
+    grimm_jacob: Author,
+    grimm_wilhelm: Author,
 ) -> None:
-    pushkin = next(
-        filter(lambda a: "Pushkin" in a.name, installed_authors.values())
-    )
-    pelevin = next(
-        filter(lambda a: "Pelevin" in a.name, installed_authors.values())
-    )
+    title_de = "Hänsel und Gretel"
+    title_en = "Hansel and Gretel"
 
-    title_pushkin = f"Biography of {pushkin.name}"
-    title_pelevin = f"Biography of {pelevin.name}"
+    lost(client, title_de)
+    lost(client, title_en)
 
-    no_book(client, title_pushkin)
-    no_book(client, title_pelevin)
+    created(client, authors=[grimm_jacob, grimm_wilhelm], title=title_de)
+    book_en = exists(client, title_de)
+    lost(client, title_en)
 
-    book_created(client, title_pushkin, [pushkin])
-    book = book_exists(client, authors=[pushkin], title=title_pushkin)
-    no_book(client, title_pelevin)
+    cannot_create_with_taken_title(client, title_de)
 
-    book_updated(
-        client,
-        book.book_id,
-        authors=[pushkin, pelevin],
-        title=title_pelevin,
-    )
-    book_exists(client, authors=[pushkin, pelevin], title=title_pelevin)
-    no_book(client, title_pushkin)
+    book_en = updated(client, book_en, title=title_en)
+    lost(client, title_de)
+    exists(client, title_en)
 
-    book_updated(client, book.book_id, authors=[pushkin])
-    book_exists(client, authors=[pushkin], title=title_pelevin)
+    book_en = updated(client, book_en, authors=[grimm_jacob])
+    book_en = updated(client, book_en, authors=[grimm_jacob, grimm_wilhelm])
+    book_en = updated(client, book_en, authors=[grimm_wilhelm])
+    book_en = updated(client, book_en, authors=[grimm_wilhelm, grimm_jacob])
 
-    book_updated(client, book.book_id, authors=[pelevin])
-    book_exists(client, authors=[pelevin], title=title_pelevin)
+    cannot_update_lost(client, faker)
 
-    book_updated(client, book.book_id, authors=[])
-    book_exists(client, authors=[], title=title_pelevin)
+    created(client, title=title_de)
+    exists(client, title_de)
+    exists(client, title_en)
 
-    delete_book(client, title_pelevin)
-    no_book(client, title_pelevin)
-    no_book(client, title_pushkin)
+    delete(client, title_de)
+    lost(client, title_de)
+    exists(client, title_en)
+
+    delete(client, title_en)
+    lost(client, title_de)
+    lost(client, title_en)
+
+    cannot_make_degenerates(client, [grimm_jacob, grimm_wilhelm])
 
 
-def book_created(
+def cannot_make_degenerates(
+    client: AppClient,
+    authors: Collection[Author],
+    /,
+) -> None:
+    authors_i = iter(authors)
+    books_in_common = set(next(authors_i).book_ids)
+    for author in authors_i:
+        books_in_common &= set(author.book_ids)
+    assert books_in_common
+    book_in_common = books_in_common.pop()
+    with pytest.raises(AppClientError) as excinfo:
+        client.delete_book_by_id(book_in_common)
+
+    exc = excinfo.value
+    assert exc.response_code == 409
+
+    assert isinstance(exc.response_body, dict)
+
+    errors = exc.response_body.get("errors")
+    assert isinstance(errors, list)
+    assert len(errors) == 2
+
+    expected = [
+        f"The Author(author_id={author.author_id}, name={author.name!r})"
+        " will become degenerate without books."
+        for author in sorted(authors, key=lambda i: i.name)
+    ]
+    assert errors == expected
+
+
+def cannot_create_with_taken_title(
     client: AppClient,
     title: str,
-    authors: list[Author],
     /,
+) -> None:
+    with pytest.raises(AppClientError) as excinfo:
+        client.create_book(title=title)
+
+    err = excinfo.value
+
+    assert err.response_code == 409
+    assert isinstance(err.response_body, dict)
+    errors = err.response_body.get("errors")
+    assert isinstance(errors, list)
+    assert len(errors) == 1
+    error = errors[0]
+    expected = f"The Book({title=!r}) already exists."
+    assert error == expected
+
+
+def cannot_update_lost(
+    client: AppClient,
+    faker: Faker,
+    /,
+) -> None:
+    lost_id = uuid4()
+    lost_title = faker.name()
+    with pytest.raises(AppClientError) as excinfo:
+        client.update_book(lost_id, title=lost_title)
+
+    err = excinfo.value
+
+    assert err.response_code == 404
+    assert isinstance(err.response_body, dict)
+    errors = err.response_body.get("errors")
+    assert isinstance(errors, list)
+    assert len(errors) == 1
+    error = errors[0]
+    expected = f"The Book(book_id={lost_id}) does not exist."
+    assert error == expected
+
+
+def created(
+    client: AppClient,
+    /,
+    *,
+    title: str,
+    authors: Collection[Author] | None = None,
 ) -> Book:
-    author_ids = [author.author_id for author in authors]
+    author_ids = None
+    if authors:
+        author_ids = [i.author_id for i in authors]
     book = client.create_book(author_ids=author_ids, title=title)
 
     assert book.book_id
     assert book.title == title
-    assert book.authors == authors
+
+    compare_to = [] if author_ids is None else author_ids
+    assert book.author_ids == compare_to
 
     return book
 
 
-def book_exists(
-    client: AppClient,
-    /,
-    *,
-    authors: list[Author] | None = None,
-    title: str,
-) -> Book:
+def exists(client: AppClient, title: str, /) -> Book:
     book = client.get_book_by_title(title)
     book_by_id = client.get_book_by_id(book.book_id)
 
     assert book_by_id == book
-
-    if authors is not None:
-        assert book.authors == authors
-
     assert book.title == title
 
     return book
 
 
-def book_updated(
+def updated(
     client: AppClient,
-    book_id: ID,
+    book_original: Book,
     /,
     *,
     authors: list[Author] | None = None,
     title: str | None = None,
 ) -> Book:
-    book_original = client.get_book_by_id(book_id)
     author_ids = None
     if authors is not None:
-        author_ids = [author.author_id for author in authors]
+        author_ids = [
+            i.author_id for i in sorted(authors, key=lambda i: i.name)
+        ]
+
     book_updated = client.update_book(
-        book_id, author_ids=author_ids, title=title
+        book_original.book_id,
+        author_ids=author_ids,
+        title=title,
     )
 
     assert book_original.book_id == book_updated.book_id
 
     if title is not None and title != book_original.title:
-        assert book_original.title != book_updated.title
+        assert book_updated.title != book_original.title
         assert book_updated.title == title
     else:
-        assert book_original.title == book_updated.title
+        assert book_updated.title == book_original.title
         assert book_updated.title != title
 
-    if authors is not None and authors != book_original.authors:
-        assert book_original.authors != book_updated.authors
-        assert book_updated.authors == authors
+    if authors is not None and author_ids != book_original.author_ids:
+        assert book_updated.author_ids != book_original.author_ids
+        assert book_updated.author_ids == author_ids
     else:
-        assert book_original.authors == book_updated.authors
-        assert book_updated.authors != authors
+        assert book_updated.author_ids == book_original.author_ids
+        assert book_updated.author_ids != author_ids
 
     return book_updated
 
 
-def no_book(client: AppClient, title: str, /) -> None:
-    books = client.get_all_books()
-    books_with_title = {book.book_id for book in books if book.title == title}
-    assert len(books_with_title) == 0
+def lost(client: AppClient, title: str, /) -> None:
+    with pytest.raises(AppClientError):
+        client.get_book_by_title(title)
 
 
-def delete_book(client: AppClient, title: str, /) -> None:
-    book = book_exists(client, title=title)
+def delete(client: AppClient, title: str, /) -> None:
+    book = exists(client, title)
     client.delete_book_by_id(book.book_id)

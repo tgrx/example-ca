@@ -17,9 +17,8 @@ class CreateBookUseCase:
 
     repo: BookRepo
 
-    def __call__(self, /, *, author_ids: Collection[ID], title: str) -> Book:
-        book = self.repo.create(author_ids=author_ids, title=title)
-
+    def __call__(self, /, *, title: str) -> Book:
+        book = self.repo.create(title=title)
         return book
 
 
@@ -86,7 +85,6 @@ class UpdateBookUseCase:
         title: str | None = None,
     ) -> Book:
         book = self.repo.update(book_id, author_ids=author_ids, title=title)
-
         return book
 
 

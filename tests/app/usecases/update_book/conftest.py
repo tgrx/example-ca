@@ -7,21 +7,29 @@ from app.entities.models import Book
 
 
 @pytest.fixture(scope="function")
-def james_joyce(*, author_repo: AuthorRepo) -> Author:
-    author = author_repo.create(name="James Joyce")
-    return author
-
-
-@pytest.fixture(scope="function")
-def victor_pelevin(*, author_repo: AuthorRepo) -> Author:
-    author = author_repo.create(name="Victor Pelevin")
-    return author
-
-
-@pytest.fixture(scope="function")
-def ulysses(*, book_repo: BookRepo, james_joyce: Author) -> Book:
-    book = book_repo.create(
-        author_ids=[james_joyce.author_id],
-        title="Ulysses",
-    )
+def laws(book_repo: BookRepo) -> Book:
+    title = "Laws"
+    book = book_repo.create(title=title)
     return book
+
+
+@pytest.fixture(scope="function")
+def plato(author_repo: AuthorRepo, laws: Book) -> Author:
+    book_ids = [laws.book_id]
+    name = "Plato"
+    author = author_repo.create(book_ids=book_ids, name=name)
+    return author
+
+
+@pytest.fixture(scope="function")
+def republic(book_repo: BookRepo) -> Book:
+    title = "Republic"
+    book = book_repo.create(title=title)
+    return book
+
+
+__all__ = (
+    "laws",
+    "plato",
+    "republic",
+)
