@@ -1,8 +1,8 @@
 from typing import Collection
 from uuid import uuid4
-from devtools import debug
 
 import pytest
+from devtools import debug
 from faker import Faker
 
 from app.entities.models import Author

@@ -12,6 +12,7 @@ class Author(models.Model):
 
     class Meta:
         db_table = "authors"
+        ordering = ["name", "pk"]
         verbose_name = "Author"
         verbose_name_plural = "Authors"
 

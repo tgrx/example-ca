@@ -13,6 +13,7 @@ class Book(models.Model):
 
     class Meta:
         db_table = "books"
+        ordering = ["title", "pk"]
         verbose_name = "Book"
         verbose_name_plural = "Books"
 
