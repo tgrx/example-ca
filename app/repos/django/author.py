@@ -20,10 +20,8 @@ class AuthorRepo:
     def create(self, /, *, book_ids: Collection[ID], name: str) -> Author:
         clean_book_ids = self._clean_book_ids(book_ids)
         self._raise_on_degenerate_author(clean_book_ids, name=name)
-        author_id = uuid4()
-        orm_author = OrmAuthor(name=name, pk=author_id)
         with transaction.atomic():
-            orm_author.save()
+            orm_author = self._create_without_relations(name=name)
             orm_author.books.add(*clean_book_ids)  # type: ignore
         author = Author.model_validate(orm_author)
         return author
@@ -95,9 +93,7 @@ class AuthorRepo:
 
     def _clean_book_ids(self, book_ids: Collection[ID], /) -> list[ID]:
         raw_book_ids = sorted(set(book_ids))
-        books = (
-            OrmBook.objects.filter(pk__in=raw_book_ids).order_by("title").all()
-        )
+        books = OrmBook.objects.filter(pk__in=raw_book_ids).all()
         clean_book_ids = [i.pk for i in books]
 
         lost_book_ids = [i for i in raw_book_ids if i not in clean_book_ids]
@@ -105,6 +101,12 @@ class AuthorRepo:
             raise LostBooksError(book_ids=lost_book_ids)
 
         return clean_book_ids
+
+    def _create_without_relations(self, /, *, name: str) -> OrmAuthor:
+        author_id = uuid4()
+        orm_author = OrmAuthor(name=name, pk=author_id)
+        orm_author.save()
+        return orm_author
 
     def _raise_on_degenerate_author(
         self,
